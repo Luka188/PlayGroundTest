@@ -35,7 +35,8 @@ public class TP : MonoBehaviour {
             if (Physics.Raycast(transform.position, cam.transform.forward, out hit, 10))
             {
                 transform.position = hit.point+Vector3.up*0.5f;
-                StartCoroutine(Cor());
+                StopCoroutine("Cor");
+                StartCoroutine("Cor");
                 
             }
             
