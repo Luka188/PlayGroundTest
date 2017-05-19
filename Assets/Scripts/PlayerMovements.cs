@@ -39,7 +39,7 @@ public class PlayerMovements : MonoBehaviour
 
         if (jump > 0)
         {
-            float prevmagn = myRigidBody.velocity.magnitude + 0.5f;
+            float prevmagn = Pythagore(myRigidBody.velocity.x,myRigidBody.velocity.z) + 0.5f;
             myRigidBody.velocity = Vector3.zero;
             myRigidBody.AddForce(transform.forward * vertical * prevmagn+ Vector3.up * jump, ForceMode.VelocityChange);
             
@@ -49,7 +49,7 @@ public class PlayerMovements : MonoBehaviour
             myRigidBody.AddForce(transform.forward * vertical * myspeed * Time.deltaTime + transform.right * horizontal *myspeed* Time.deltaTime, ForceMode.VelocityChange);
         }
         jump = 0.0f;
-
+        
     }
     void Mouselook()
     {
