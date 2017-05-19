@@ -39,14 +39,14 @@ public class PlayerMovements : MonoBehaviour
 
         if (jump > 0)
         {
-            float prevmagn = myRigidBody.velocity.magnitude + 1;
+            float prevmagn = myRigidBody.velocity.magnitude + 0.5f;
             myRigidBody.velocity = Vector3.zero;
             myRigidBody.AddForce(transform.forward * vertical * prevmagn+ Vector3.up * jump, ForceMode.VelocityChange);
             
         }
         else
         {
-            myRigidBody.AddForce(transform.forward * vertical * myspeed * Time.deltaTime + transform.right * horizontal * Time.deltaTime, ForceMode.VelocityChange);
+            myRigidBody.AddForce(transform.forward * vertical * myspeed * Time.deltaTime + transform.right * horizontal *myspeed* Time.deltaTime, ForceMode.VelocityChange);
         }
         jump = 0.0f;
 
