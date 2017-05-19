@@ -11,10 +11,12 @@ public class PlayerMovements : MonoBehaviour
     float maxSlope = 50;
     float maxYVel = 0;
     float currentT = 0;
+    float myVelmagn = 0;
     public float jump;
     public float speed;
     public float MouseSpeed;
     public float JumpForce;
+   
     //bools
     bool grounded = false;
 
@@ -35,11 +37,12 @@ public class PlayerMovements : MonoBehaviour
         float vertical = Input.GetAxisRaw("Vertical");
         float horizontal = Input.GetAxisRaw("Horizontal");
         CheckJump();
+        checkCurve();
         if (grounded)
         {
-            
-            
-            myRigidBody.AddForce(new Vector3(vertical*SlopeCurveModifier(, ForceMode.VelocityChange);
+            float myspeed = SlopeCurveModifier.Evaluate(currentT);
+
+            myRigidBody.AddForce(transform.forward* vertical * myspeed*Time.deltaTime +transform.right*horizontal*myspeed*Time.deltaTime, ForceMode.VelocityChange);
 
         }
         else 
@@ -64,7 +67,10 @@ public class PlayerMovements : MonoBehaviour
     }
     void checkCurve()
     {
-        if()
+        if (myRigidBody.velocity.magnitude < myVelmagn - 10)
+            currentT = 0;
+
+        myVelmagn = myRigidBody.velocity.magnitude;
     }
     void CheckJump()
     {
