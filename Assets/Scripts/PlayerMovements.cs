@@ -9,9 +9,6 @@ public class PlayerMovements : MonoBehaviour
 
     //floats
     float maxSlope = 50;
-    float maxYVel = 0;
-    float currentT = 0;
-    float myVelmagn = 0;
     public float jump;
     public float speed;
     public float MouseSpeed;
@@ -37,11 +34,10 @@ public class PlayerMovements : MonoBehaviour
         float vertical = Input.GetAxisRaw("Vertical");
         float horizontal = Input.GetAxisRaw("Horizontal");
         CheckJump();
-        checkCurve();
         if (grounded)
         {
-            float myspeed = SlopeCurveModifier.Evaluate(currentT);
-
+            float myspeed = SlopeCurveModifier.Evaluate(myRigidBody.velocity.magnitude);
+            print(myRigidBody.velocity.magnitude);
             myRigidBody.AddForce(transform.forward* vertical * myspeed*Time.deltaTime +transform.right*horizontal*myspeed*Time.deltaTime, ForceMode.VelocityChange);
 
         }
@@ -52,7 +48,7 @@ public class PlayerMovements : MonoBehaviour
             Vector3 forcetoadd = new Vector3(desiredmove.x - myRigidBody.velocity.x, jump*5, desiredmove.z - myRigidBody.velocity.z) / 5;
             myRigidBody.AddForce(forcetoadd, ForceMode.VelocityChange);
         }
-        currentT += Time.deltaTime;
+
         jump = 0.0f;
 
     }
@@ -65,13 +61,8 @@ public class PlayerMovements : MonoBehaviour
         cam.transform.eulerAngles = new Vector3(cam.transform.eulerAngles.x-rotUpDown,cam.transform.eulerAngles.y);
         
     }
-    void checkCurve()
-    {
-        if (myRigidBody.velocity.magnitude < myVelmagn - 10)
-            currentT = 0;
-
-        myVelmagn = myRigidBody.velocity.magnitude;
-    }
+ 
+    
     void CheckJump()
     {
         if (Input.GetKeyDown(KeyCode.Space)&&grounded){
