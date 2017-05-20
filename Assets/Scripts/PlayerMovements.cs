@@ -91,8 +91,8 @@ public class PlayerMovements : MonoBehaviour
             return 0;
         else
         {
-            print((1 / (1 + SpaceCounter)));
-            print(SpaceCounter);
+            //print((1 / (1 + SpaceCounter)));
+            //print(SpaceCounter);
             return (1 / 2 * (1 + SpaceCounter));
         }
     }
