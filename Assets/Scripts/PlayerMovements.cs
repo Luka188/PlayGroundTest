@@ -23,6 +23,7 @@ public class PlayerMovements : MonoBehaviour
     bool grounded = false;
     bool Sprinting = false;
     bool countingSpace;
+    bool JumpWhenPossible = false;
 
     //Unity Stuffs
     Rigidbody myRigidBody;
@@ -31,7 +32,8 @@ public class PlayerMovements : MonoBehaviour
 
     [SerializeField]
     Text DisplaySpeed;
-
+    [SerializeField]
+    RawImage WillJump;
 
     private void Start()
     {
@@ -113,7 +115,14 @@ public class PlayerMovements : MonoBehaviour
 
     void CheckJump()
     {
-        if (Input.GetKeyDown(KeyCode.Space)&&grounded){
+        if (Input.GetKeyDown(KeyCode.Space)){
+            JumpWhenPossible = true;
+            WillJump.color = Color.green;
+        }
+        if(JumpWhenPossible&&grounded)
+        {
+            JumpWhenPossible = false;
+            WillJump.color = Color.white;
             jump = JumpForce;
             grounded = false;
             countingSpace = true;
@@ -124,6 +133,8 @@ public class PlayerMovements : MonoBehaviour
         }
         if (Input.GetKeyUp(KeyCode.Space))
         {
+            JumpWhenPossible = false;
+            WillJump.color = Color.white;
             countingSpace = false;
         }
     }

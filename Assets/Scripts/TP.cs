@@ -52,10 +52,9 @@ public class TP : MonoBehaviour {
                 StopCoroutine("Cor");
                 StartCoroutine("Cor");
                 StartCoroutine(CoolDownCor());
-                var emitParams = new ParticleSystem.EmitParams();
-                emitParams.position = hit.point ;
-                PC.Emit(emitParams, 200);
+                PC.Emit( 200);
             }
+            
             
         }
     }
