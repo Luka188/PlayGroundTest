@@ -1,15 +1,22 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class TP : MonoBehaviour {
 
     [SerializeField]
     GameObject visualGO;
-
+    [SerializeField]
+    ParticleSystem PC;
+    [SerializeField]
+    Image Circle;
     GameObject visual;
 
     public Camera cam;
+
+    public float CoolDown;
+    bool SpellReady = true;
     private void Start()
     {
         
@@ -19,7 +26,7 @@ public class TP : MonoBehaviour {
 
     private void Update()
     {
-        if (Input.GetMouseButton(1))
+        if (Input.GetMouseButton(1)&&SpellReady)
         {
             visual.SetActive(true);
             RaycastHit hit;
@@ -27,8 +34,15 @@ public class TP : MonoBehaviour {
             {
                 visual.transform.position = hit.point;
             }
+            else
+            {
+                if (visual.activeSelf)
+                {
+                    visual.SetActive(false);
+                }
+            }
         }
-        if (Input.GetMouseButtonUp(1))
+        if (Input.GetMouseButtonUp(1)&&SpellReady)
         {
             visual.SetActive(false);
             RaycastHit hit;
@@ -37,7 +51,10 @@ public class TP : MonoBehaviour {
                 transform.position = hit.point+Vector3.up*0.5f;
                 StopCoroutine("Cor");
                 StartCoroutine("Cor");
-                
+                StartCoroutine(CoolDownCor());
+                var emitParams = new ParticleSystem.EmitParams();
+                emitParams.position = hit.point ;
+                PC.Emit(emitParams, 200);
             }
             
         }
@@ -55,5 +72,19 @@ public class TP : MonoBehaviour {
             yield return null;
         }
         cam.fieldOfView = min;
+    }
+    IEnumerator CoolDownCor()
+    {
+
+        SpellReady = false;
+        float i = 0;
+        Circle.fillAmount = 0;
+        while (i < CoolDown)
+        {
+            Circle.fillAmount = i / CoolDown;
+            i += Time.deltaTime;
+            yield return null;
+        }
+        SpellReady = true;
     }
 }
