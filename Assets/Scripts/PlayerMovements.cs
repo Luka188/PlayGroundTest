@@ -12,7 +12,7 @@ public class PlayerMovements : MonoBehaviour
     float maxSlope = 50;
     float jump = 0;
     float defaultFieldOfView;
-    float speedToDecrease = 5;
+    float speedToAdd;
     float SpaceCounter = 0;
     public float speed;
     public float MouseSpeed;
@@ -49,21 +49,15 @@ public class PlayerMovements : MonoBehaviour
         float horizontal = Input.GetAxisRaw("Horizontal");
         CheckJump();
         CheckSprint();
+        mySpeed = CalculateSpeed();
         if (Sprinting)
         {
-            mySpeed = mySpeed + Time.deltaTime* curve.Evaluate((mySpeed / 15f));
-            Vector3 desiredSpeed = transform.forward * vertical * mySpeed ;
+            Vector3 desiredSpeed = transform.forward * (vertical>0?vertical:0) * mySpeed ;
             Vector3 toadd = new Vector3(desiredSpeed.x - myRigidBody.velocity.x, jump + JumpFormula(), desiredSpeed.z - myRigidBody.velocity.z);
             myRigidBody.AddForce(toadd, ForceMode.VelocityChange);
         }
         else
         {
-            mySpeed = mySpeed-(speedToDecrease-5)*Time.deltaTime*4;
-            if (mySpeed < 5)
-            {
-                speedToDecrease = 5;
-                mySpeed = 5;
-            }
             Vector3 desiredSpeed = transform.forward * vertical * mySpeed  + transform.right * horizontal * mySpeed;
             Vector3 toadd = new Vector3(desiredSpeed.x - myRigidBody.velocity.x, jump + JumpFormula(), desiredSpeed.z - myRigidBody.velocity.z );
             myRigidBody.AddForce(toadd, ForceMode.VelocityChange);
@@ -98,14 +92,25 @@ public class PlayerMovements : MonoBehaviour
             return (1 / 2 * (1 + SpaceCounter));
         }
     }
-
+    float CalculateSpeed()
+    {
+        float TmpSpeed = mySpeed + speedToAdd * Time.deltaTime * 4;
+        print(TmpSpeed);
+        if (TmpSpeed < 5)
+            return 5;
+        else if (TmpSpeed > 10)
+            return 10;
+        return TmpSpeed;
+    }
     void CheckSprint()
     {
-        if(Input.GetKeyUp(KeyCode.LeftShift))
-            speedToDecrease = mySpeed; 
+        if (Input.GetKeyUp(KeyCode.LeftShift))
+            speedToAdd = -5;
         if (Input.GetKey(KeyCode.LeftShift))
+        {
             Sprinting = true;
-
+            speedToAdd = 5;
+        }
         else
         {
             Sprinting = false;
