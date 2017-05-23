@@ -70,10 +70,11 @@ public class TP : MonoBehaviour {
             if (Physics.Raycast(transform.position, cam.transform.forward, out hit, 10))
             {
                 transform.position = hit.point+Vector3.up*0.5f;
+                PM.ResetVelocity();
                 StopCoroutine("Cor");
                 StartCoroutine("Cor");
                 StartCoroutine(CoolDownCor());
-                PC.Emit( 200);
+                PC.Emit(200);
             }
         }
     }
@@ -127,8 +128,8 @@ public class TP : MonoBehaviour {
         Circle.fillAmount = 0;
         while (i < CoolDown)
         {
-            Circle.fillAmount = i / CoolDown;
             i += Time.deltaTime;
+            Circle.fillAmount = i / CoolDown;
             yield return null;
         }
         SpellReady = true;

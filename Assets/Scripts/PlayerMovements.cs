@@ -141,7 +141,11 @@ public class PlayerMovements : MonoBehaviour
         }
     }
     
-
+    public void ResetVelocity()
+    {
+        currentH = 0;
+        currentV = 0;
+    }
     void CheckJump()
     {
         if (Input.GetKeyDown(KeyCode.Space)){
