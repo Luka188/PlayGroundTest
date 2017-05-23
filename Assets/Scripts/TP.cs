@@ -41,7 +41,6 @@ public class TP : MonoBehaviour {
         }
         if (Input.GetMouseButton(1)&&SpellReady&&Spelling)
         {
-            PM.CanControl = false;
             Pointor.enabled = true;
             RaycastHit hit;
             if (Physics.Raycast(transform.position, cam.transform.forward,out hit,10))
@@ -56,7 +55,6 @@ public class TP : MonoBehaviour {
         }
         if (Input.GetMouseButtonDown(0)&&Spelling)
         {
-            PM.CanControl = true;
             Pointor.enabled = false;
             StopCoroutine("AddVignette");
             StartCoroutine("RemoveVignette");
@@ -64,7 +62,6 @@ public class TP : MonoBehaviour {
         }
         if (Input.GetMouseButtonUp(1)&&SpellReady&&Spelling)
         {
-            PM.CanControl = true;
             Spelling = false;
             Pointor.enabled = false;
             StopCoroutine("AddVignette");

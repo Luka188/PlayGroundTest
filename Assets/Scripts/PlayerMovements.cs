@@ -13,18 +13,20 @@ public class PlayerMovements : MonoBehaviour
     float jump = 0;
     float defaultFieldOfView;
     float SpaceCounter = 0;
-    float lastVertical = 0;
+    float oldVertical;
+    float oldHorizontal;
+    float currentV;
+    float currentH;
     public float speed;
     public float MouseSpeed;
     public float JumpForce;
     public float mySpeed = 5;
-    public float AirControl = 2;
-   
+    public float AirAcceleration = 2;
+    public float GroundAcceleration = 4;
     //bools
     bool grounded = false;
     bool countingSpace;
     bool JumpWhenPossible = false;
-    public bool CanControl = true;
     //Unity Stuffs
     Rigidbody myRigidBody;
     public Camera cam;
@@ -42,20 +44,23 @@ public class PlayerMovements : MonoBehaviour
     }
     void FixedUpdate()
     {
-        
-        
-        float vertical = Input.GetAxisRaw("Vertical");
-        float horizontal = Input.GetAxisRaw("Horizontal");
+
+
+        float vertical = MyGetAxis(true);
+        float horizontal = MyGetAxis(false);
         CheckJump();
 
         mySpeed = 10;
-
-        if (CanControl)
-        {
-            Vector3 desiredSpeed = transform.forward * GetNewVertical(vertical) * mySpeed;
-            Vector3 toAdd = new Vector3(desiredSpeed.x - myRigidBody.velocity.x, jump + JumpFormula(), desiredSpeed.z - myRigidBody.velocity.z);
-            myRigidBody.AddForce(toAdd, ForceMode.VelocityChange);
-        }
+        Vector3 desiredSpeed = transform.forward * vertical * mySpeed + transform.right * horizontal * mySpeed;
+        desiredSpeed = Vector3.ClampMagnitude(desiredSpeed, mySpeed);
+        Vector3 toAdd;
+        if (grounded)
+            toAdd = new Vector3((desiredSpeed.x - myRigidBody.velocity.x) , jump + JumpFormula(), (desiredSpeed.z - myRigidBody.velocity.z));
+        else
+            toAdd = new Vector3((desiredSpeed.x - myRigidBody.velocity.x) , jump + JumpFormula(), (desiredSpeed.z - myRigidBody.velocity.z) );
+       
+        myRigidBody.AddForce(toAdd, ForceMode.VelocityChange);
+        
         float currentSpeed = Pythagore(myRigidBody.velocity.x, myRigidBody.velocity.z);
         DisplaySpeed.text = currentSpeed.ToString("#.##");
 
@@ -72,14 +77,47 @@ public class PlayerMovements : MonoBehaviour
         cam.transform.eulerAngles = new Vector3(cam.transform.eulerAngles.x-rotUpDown,cam.transform.eulerAngles.y);
         
     }*/
+    /*
     float GetNewVertical(float vertical)
     {
         
         vertical =  Mathf.MoveTowards(lastVertical, vertical, Time.deltaTime *(vertical==0?AirControl/2:AirControl));
         lastVertical = vertical;
         return vertical;
+    }*/
+    float MyGetAxis(bool Vertical)
+    {
+        if (Vertical)
+        {
+            float current;
+            if (Input.GetKey(KeyCode.Z))
+            {
+                current = 1;
+                if (Input.GetKey(KeyCode.S))
+                    current = 0;
+            }
+            else if (Input.GetKey(KeyCode.S))
+                current = -1;
+            else current = 0;
+            currentV = Mathf.MoveTowards(currentV, current, Time.deltaTime);
+            return currentV;
+        }
+        else
+        {
+            float current;
+            if (Input.GetKey(KeyCode.D))
+            {
+                current = 1;
+                if (Input.GetKey(KeyCode.Q))
+                    current = 0;
+            }
+            else if (Input.GetKey(KeyCode.Q))
+                current = -1;
+            else current = 0;
+            currentH = Mathf.MoveTowards(currentH, current, Time.deltaTime);
+            return currentH;
+        }
     }
-
     float Pythagore(float x, float y)
     {
         return Mathf.Sqrt(x * x + y * y);
