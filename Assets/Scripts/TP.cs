@@ -111,25 +111,17 @@ public class TP : MonoBehaviour {
         
         Time.timeScale = slowMotionSpeed;
         Time.fixedDeltaTime = slowMotionSpeed * 0.015f;
-        cam.fieldOfView += 20;
-        float max = cam.fieldOfView;
-        float min = cam.fieldOfView - 20;
         float i = 0;
         while (i < 1)
         {
-            cam.fieldOfView = Mathf.Lerp(max, min, i);
-            i += Time.deltaTime * SlowMoDuration;
-            yield return null;
+            i += Time.deltaTime * 1/slowMotionSpeed;
+            yield return null; 
         }
         Time.timeScale = 1;
         Time.fixedDeltaTime = 0.015f;
-        cam.fieldOfView = min;
     }
     IEnumerator CoolDownCor()
     {
-        VignetteModel.Settings nvignette = PPP.vignette.settings;
-        nvignette.intensity -= 0.3f;
-        PPP.vignette.settings = nvignette;
         SpellReady = false;
         float i = 0;
         Circle.fillAmount = 0;
