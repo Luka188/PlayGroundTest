@@ -99,7 +99,7 @@ public class PlayerMovements : MonoBehaviour
             else if (Input.GetKey(KeyCode.S))
                 current = -1;
             else current = 0;
-            currentV = Mathf.MoveTowards(currentV, current, Time.deltaTime);
+            currentV = Mathf.MoveTowards(currentV, current, Time.deltaTime*GetAcceleration());
             return currentV;
         }
         else
@@ -114,9 +114,16 @@ public class PlayerMovements : MonoBehaviour
             else if (Input.GetKey(KeyCode.Q))
                 current = -1;
             else current = 0;
-            currentH = Mathf.MoveTowards(currentH, current, Time.deltaTime);
+            currentH = Mathf.MoveTowards(currentH, current, Time.deltaTime*GetAcceleration());
             return currentH;
         }
+    }
+    float GetAcceleration()
+    {
+        if (grounded)
+            return GroundAcceleration;
+        else
+            return AirAcceleration;
     }
     float Pythagore(float x, float y)
     {
