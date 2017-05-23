@@ -43,7 +43,7 @@ public class PlayerMovements : MonoBehaviour
         defaultFieldOfView = cam.fieldOfView;
         
     }
-    void Update()
+    void FixedUpdate()
     {
         
 

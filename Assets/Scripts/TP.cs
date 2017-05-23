@@ -6,45 +6,39 @@ using UnityEngine.UI;
 public class TP : MonoBehaviour {
 
     [SerializeField]
-    GameObject visualGO;
+    RawImage Pointor;
     [SerializeField]
     ParticleSystem PC;
     [SerializeField]
     Image Circle;
-    GameObject visual;
 
     public Camera cam;
-
+    public float slowMotionSpeed;
+    public float SlowMoDuration;
     public float CoolDown;
+
     bool SpellReady = true;
-    private void Start()
-    {
-        
-        visual =  Instantiate(visualGO);
-        visual.SetActive(false);
-    }
+
 
     private void Update()
     {
         if (Input.GetMouseButton(1)&&SpellReady)
         {
-            visual.SetActive(true);
+            Pointor.enabled = true;
             RaycastHit hit;
             if (Physics.Raycast(transform.position, cam.transform.forward,out hit,10))
             {
-                visual.transform.position = hit.point;
+                
+                Pointor.color = Color.green;
             }
             else
             {
-                if (visual.activeSelf)
-                {
-                    visual.SetActive(false);
-                }
+                Pointor.color = Color.black;
             }
         }
         if (Input.GetMouseButtonUp(1)&&SpellReady)
         {
-            visual.SetActive(false);
+            Pointor.enabled = false;
             RaycastHit hit;
             if (Physics.Raycast(transform.position, cam.transform.forward, out hit, 10))
             {
@@ -54,12 +48,12 @@ public class TP : MonoBehaviour {
                 StartCoroutine(CoolDownCor());
                 PC.Emit( 200);
             }
-            
-            
         }
     }
     IEnumerator Cor()
     {
+        Time.timeScale = slowMotionSpeed;
+        Time.fixedDeltaTime = slowMotionSpeed * 0.015f;
         cam.fieldOfView += 20;
         float max = cam.fieldOfView;
         float min = cam.fieldOfView - 20;
@@ -67,9 +61,11 @@ public class TP : MonoBehaviour {
         while (i < 1)
         {
             cam.fieldOfView = Mathf.Lerp(max, min, i);
-            i += Time.deltaTime * 8;
+            i += Time.deltaTime * SlowMoDuration;
             yield return null;
         }
+        Time.timeScale = 1;
+        Time.fixedDeltaTime = 0.015f;
         cam.fieldOfView = min;
     }
     IEnumerator CoolDownCor()
