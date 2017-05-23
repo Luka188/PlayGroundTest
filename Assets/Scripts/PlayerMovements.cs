@@ -18,6 +18,7 @@ public class PlayerMovements : MonoBehaviour
     public float MouseSpeed;
     public float JumpForce;
     public float mySpeed = 5;
+    public float AirControl = 2;
    
     //bools
     bool grounded = false;
@@ -43,8 +44,8 @@ public class PlayerMovements : MonoBehaviour
     }
     void Update()
     {
+        
 
-        Mouselook();
         float vertical = Input.GetAxisRaw("Vertical");
         float horizontal = Input.GetAxisRaw("Horizontal");
         CheckJump();
@@ -52,15 +53,22 @@ public class PlayerMovements : MonoBehaviour
         mySpeed = CalculateSpeed();
         if (Sprinting)
         {
-            Vector3 desiredSpeed = transform.forward * (vertical>0?vertical:0) * mySpeed ;
-            Vector3 toadd = new Vector3(desiredSpeed.x - myRigidBody.velocity.x, jump + JumpFormula(), desiredSpeed.z - myRigidBody.velocity.z);
-            myRigidBody.AddForce(toadd, ForceMode.VelocityChange);
+            Vector3 desiredSpeed = transform.forward * (vertical>0? vertical:0f) * mySpeed ;
+            Vector3 toAdd = new Vector3(desiredSpeed.x - myRigidBody.velocity.x, jump + JumpFormula(), desiredSpeed.z - myRigidBody.velocity.z);
+            myRigidBody.AddForce(toAdd, ForceMode.VelocityChange);
         }
         else
         {
-            Vector3 desiredSpeed = transform.forward * vertical * mySpeed  + transform.right * horizontal * mySpeed;
-            Vector3 toadd = new Vector3(desiredSpeed.x - myRigidBody.velocity.x, jump + JumpFormula(), desiredSpeed.z - myRigidBody.velocity.z );
-            myRigidBody.AddForce(toadd, ForceMode.VelocityChange);
+            Vector3 desiredSpeed = (transform.forward * vertical * mySpeed + transform.right * horizontal * mySpeed);
+            Vector3 toAdd;
+            if (!grounded)
+            {
+                 
+                toAdd = new Vector3((desiredSpeed.x - myRigidBody.velocity.x) * Time.deltaTime * AirControl, jump + JumpFormula(), (desiredSpeed.z - myRigidBody.velocity.z) * Time.deltaTime * AirControl);
+            }
+            else
+                toAdd = new Vector3(desiredSpeed.x - myRigidBody.velocity.x, jump + JumpFormula(), desiredSpeed.z - myRigidBody.velocity.z);
+            myRigidBody.AddForce(toAdd, ForceMode.VelocityChange);
         }
         float currentSpeed = Pythagore(myRigidBody.velocity.x, myRigidBody.velocity.z);
         DisplaySpeed.text = currentSpeed.ToString("#.##");
@@ -69,6 +77,7 @@ public class PlayerMovements : MonoBehaviour
         jump = 0.0f;
         
     }
+    /*
     void Mouselook()
     {
         float rotLeftRight = Input.GetAxis("Mouse X") * MouseSpeed;
@@ -76,7 +85,9 @@ public class PlayerMovements : MonoBehaviour
         transform.eulerAngles = new Vector3(0,transform.eulerAngles.y+rotLeftRight);
         cam.transform.eulerAngles = new Vector3(cam.transform.eulerAngles.x-rotUpDown,cam.transform.eulerAngles.y);
         
-    }
+    }*/
+
+
     float Pythagore(float x, float y)
     {
         return Mathf.Sqrt(x * x + y * y);
