@@ -14,6 +14,7 @@ public class PlayerMovements : MonoBehaviour
     float defaultFieldOfView;
     float speedToAdd;
     float SpaceCounter = 0;
+    float lastVertical = 0;
     public float speed;
     public float MouseSpeed;
     public float JumpForce;
@@ -51,16 +52,20 @@ public class PlayerMovements : MonoBehaviour
         CheckJump();
         CheckSprint();
         mySpeed = CalculateSpeed();
+        Vector3 desiredSpeed;
+        Vector3 toAdd;
         if (Sprinting)
         {
-            Vector3 desiredSpeed = transform.forward * (vertical>0? vertical:0f) * mySpeed ;
-            Vector3 toAdd = new Vector3(desiredSpeed.x - myRigidBody.velocity.x, jump + JumpFormula(), desiredSpeed.z - myRigidBody.velocity.z);
+            if (!grounded)
+                desiredSpeed = transform.forward * GetNewVertical(vertical) * mySpeed;
+            else
+                desiredSpeed = transform.forward * vertical * mySpeed;
+           toAdd = new Vector3(desiredSpeed.x - myRigidBody.velocity.x, jump + JumpFormula(), desiredSpeed.z - myRigidBody.velocity.z);
             myRigidBody.AddForce(toAdd, ForceMode.VelocityChange);
         }
         else
         {
-            Vector3 desiredSpeed = (transform.forward * vertical * mySpeed + transform.right * horizontal * mySpeed);
-            Vector3 toAdd;
+            desiredSpeed = (transform.forward * vertical * mySpeed + transform.right * horizontal * mySpeed);
             if (!grounded)
             {
                  
@@ -86,7 +91,15 @@ public class PlayerMovements : MonoBehaviour
         cam.transform.eulerAngles = new Vector3(cam.transform.eulerAngles.x-rotUpDown,cam.transform.eulerAngles.y);
         
     }*/
-
+    float GetNewVertical(float vertical)
+    {
+        if (vertical < lastVertical)
+        {
+            vertical = lastVertical- Time.deltaTime*AirControl/4;
+        }
+        lastVertical = vertical;
+        return vertical;
+    }
 
     float Pythagore(float x, float y)
     {
@@ -106,7 +119,6 @@ public class PlayerMovements : MonoBehaviour
     float CalculateSpeed()
     {
         float TmpSpeed = mySpeed + speedToAdd * Time.deltaTime * 4;
-        print(TmpSpeed);
         if (TmpSpeed < 5)
             return 5;
         else if (TmpSpeed > 10)
@@ -116,15 +128,14 @@ public class PlayerMovements : MonoBehaviour
     void CheckSprint()
     {
         if (Input.GetKeyUp(KeyCode.LeftShift))
+        {
             speedToAdd = -5;
-        if (Input.GetKey(KeyCode.LeftShift))
+            Sprinting = false;
+        }
+        if (Input.GetKey(KeyCode.LeftShift)&&grounded)
         {
             Sprinting = true;
             speedToAdd = 5;
-        }
-        else
-        {
-            Sprinting = false;
         }
         
     }
@@ -137,6 +148,7 @@ public class PlayerMovements : MonoBehaviour
         }
         if(JumpWhenPossible&&grounded)
         {
+            CheckSprint();
             JumpWhenPossible = false;
             WillJump.color = Color.white;
             jump = JumpForce;
@@ -155,7 +167,7 @@ public class PlayerMovements : MonoBehaviour
         }
     }
     
-    void OnCollisionEnter(Collision coll)
+    void OnCollisionStay(Collision coll)
     {
         //Debug.DrawRay(coll.contacts[0].point, transform.up, Color.red, 4);
         if (Vector3.Angle(coll.contacts[0].normal, Vector3.up) < maxSlope)
@@ -168,6 +180,11 @@ public class PlayerMovements : MonoBehaviour
             
         }
 
+    }
+    private void OnCollisionExit(Collision collision)
+    {
+        if (collision.contacts.Length == 0 && grounded)
+            grounded = false;
     }
 
 
