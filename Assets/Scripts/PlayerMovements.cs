@@ -7,12 +7,11 @@ using System.Collections.Generic;
 public class PlayerMovements : MonoBehaviour
 {
     //ints
-    
+    public int WallJumpSlope;
     //floats
     float maxSlope = 50;
     float jump = 0;
     float defaultFieldOfView;
-    float speedToAdd;
     float SpaceCounter = 0;
     float lastVertical = 0;
     public float speed;
@@ -23,15 +22,13 @@ public class PlayerMovements : MonoBehaviour
    
     //bools
     bool grounded = false;
-    bool Sprinting = false;
     bool countingSpace;
     bool JumpWhenPossible = false;
-
+    public bool CanControl = true;
     //Unity Stuffs
     Rigidbody myRigidBody;
     public Camera cam;
     public AnimationCurve curve;
-
     [SerializeField]
     Text DisplaySpeed;
     [SerializeField]
@@ -46,39 +43,23 @@ public class PlayerMovements : MonoBehaviour
     void FixedUpdate()
     {
         
-
+        
         float vertical = Input.GetAxisRaw("Vertical");
         float horizontal = Input.GetAxisRaw("Horizontal");
         CheckJump();
-        CheckSprint();
-        mySpeed = CalculateSpeed();
-        Vector3 desiredSpeed;
-        Vector3 toAdd;
-        if (Sprinting)
+
+        mySpeed = 10;
+
+        if (CanControl)
         {
-            if (!grounded)
-                desiredSpeed = transform.forward * GetNewVertical(vertical) * mySpeed;
-            else
-                desiredSpeed = transform.forward * vertical * mySpeed;
-           toAdd = new Vector3(desiredSpeed.x - myRigidBody.velocity.x, jump + JumpFormula(), desiredSpeed.z - myRigidBody.velocity.z);
-            myRigidBody.AddForce(toAdd, ForceMode.VelocityChange);
-        }
-        else
-        {
-            desiredSpeed = (transform.forward * vertical * mySpeed + transform.right * horizontal * mySpeed);
-            if (!grounded)
-            {
-                 
-                toAdd = new Vector3((desiredSpeed.x - myRigidBody.velocity.x) * Time.deltaTime * AirControl, jump + JumpFormula(), (desiredSpeed.z - myRigidBody.velocity.z) * Time.deltaTime * AirControl);
-            }
-            else
-                toAdd = new Vector3(desiredSpeed.x - myRigidBody.velocity.x, jump + JumpFormula(), desiredSpeed.z - myRigidBody.velocity.z);
+            Vector3 desiredSpeed = transform.forward * GetNewVertical(vertical) * mySpeed;
+            Vector3 toAdd = new Vector3(desiredSpeed.x - myRigidBody.velocity.x, jump + JumpFormula(), desiredSpeed.z - myRigidBody.velocity.z);
             myRigidBody.AddForce(toAdd, ForceMode.VelocityChange);
         }
         float currentSpeed = Pythagore(myRigidBody.velocity.x, myRigidBody.velocity.z);
         DisplaySpeed.text = currentSpeed.ToString("#.##");
 
-        cam.fieldOfView = defaultFieldOfView + (mySpeed>5?mySpeed-5:0) * 2;
+        cam.fieldOfView = defaultFieldOfView + currentSpeed;
         jump = 0.0f;
         
     }
@@ -93,10 +74,8 @@ public class PlayerMovements : MonoBehaviour
     }*/
     float GetNewVertical(float vertical)
     {
-        if (vertical < lastVertical)
-        {
-            vertical = lastVertical- Time.deltaTime*AirControl/4;
-        }
+        
+        vertical =  Mathf.MoveTowards(lastVertical, vertical, Time.deltaTime *(vertical==0?AirControl/2:AirControl));
         lastVertical = vertical;
         return vertical;
     }
@@ -116,29 +95,7 @@ public class PlayerMovements : MonoBehaviour
             return (1 / 2 * (1 + SpaceCounter));
         }
     }
-    float CalculateSpeed()
-    {
-        float TmpSpeed = mySpeed + speedToAdd * Time.deltaTime * 4;
-        if (TmpSpeed < 5)
-            return 5;
-        else if (TmpSpeed > 10)
-            return 10;
-        return TmpSpeed;
-    }
-    void CheckSprint()
-    {
-        if (Input.GetKeyUp(KeyCode.LeftShift))
-        {
-            speedToAdd = -5;
-            Sprinting = false;
-        }
-        if (Input.GetKey(KeyCode.LeftShift)&&grounded)
-        {
-            Sprinting = true;
-            speedToAdd = 5;
-        }
-        
-    }
+    
 
     void CheckJump()
     {
@@ -148,7 +105,7 @@ public class PlayerMovements : MonoBehaviour
         }
         if(JumpWhenPossible&&grounded)
         {
-            CheckSprint();
+            //sCheckSprint();
             JumpWhenPossible = false;
             WillJump.color = Color.white;
             jump = JumpForce;
@@ -170,16 +127,24 @@ public class PlayerMovements : MonoBehaviour
     void OnCollisionStay(Collision coll)
     {
         //Debug.DrawRay(coll.contacts[0].point, transform.up, Color.red, 4);
-        if (Vector3.Angle(coll.contacts[0].normal, Vector3.up) < maxSlope)
+        float angle = Vector3.Angle(coll.contacts[0].normal, Vector3.up);
+        if (angle < maxSlope)
+        {
+            if (!grounded)
+                grounded = true;
+        }
+        else if (angle < 90 + WallJumpSlope && angle > 90 - WallJumpSlope)
         {
             
-            if (!grounded)
+            if (JumpWhenPossible)
             {
-                grounded = true;
+                JumpWhenPossible = false;
+                WillJump.color = Color.white;
+                countingSpace = true;
+                Vector3 desiredJump = new Vector3(0, 2.5f-myRigidBody.velocity.y, 0);
+                myRigidBody.AddForce(desiredJump, ForceMode.VelocityChange);
             }
-            
         }
-
     }
     private void OnCollisionExit(Collision collision)
     {
