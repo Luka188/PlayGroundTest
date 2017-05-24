@@ -55,7 +55,7 @@ public class PlayerMovements : MonoBehaviour
         desiredSpeed = Vector3.ClampMagnitude(desiredSpeed, mySpeed);
         Vector3 toAdd;
         if (grounded)
-            toAdd = new Vector3((desiredSpeed.x - myRigidBody.velocity.x) , jump + JumpFormula(), (desiredSpeed.z - myRigidBody.velocity.z));
+            toAdd = new Vector3((desiredSpeed.x - myRigidBody.velocity.x) , jump + JumpFormula() , (desiredSpeed.z - myRigidBody.velocity.z));
         else
             toAdd = new Vector3((desiredSpeed.x - myRigidBody.velocity.x) , jump + JumpFormula(), (desiredSpeed.z - myRigidBody.velocity.z) );
        
@@ -159,6 +159,7 @@ public class PlayerMovements : MonoBehaviour
             jump = JumpForce;
             grounded = false;
             countingSpace = true;
+            myRigidBody.velocity = new Vector3(myRigidBody.velocity.x, 0, myRigidBody.velocity.z);
         }
         if (countingSpace)
         {
