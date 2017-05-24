@@ -135,9 +135,8 @@ public class PlayerMovements : MonoBehaviour
             return 0;
         else
         {
-            print((1 / (1 + SpaceCounter)));
             //print(SpaceCounter);
-            return (1 / (5 + SpaceCounter));
+            return (7 / (1 + SpaceCounter))*Time.deltaTime;
         }
     }
     
@@ -163,7 +162,7 @@ public class PlayerMovements : MonoBehaviour
         }
         if (countingSpace)
         {
-            SpaceCounter += Time.deltaTime*20;
+            SpaceCounter += Time.deltaTime;
         }
         if (Input.GetKeyUp(KeyCode.Space))
         {
