@@ -136,7 +136,7 @@ public class PlayerMovements : MonoBehaviour
         else
         {
             //print(SpaceCounter);
-            return (8 / (1 + SpaceCounter))*Time.deltaTime;
+            return (7 / (1 + SpaceCounter))*Time.deltaTime;
         }
     }
     
