@@ -135,9 +135,9 @@ public class PlayerMovements : MonoBehaviour
             return 0;
         else
         {
-            //print((1 / (1 + SpaceCounter)));
+            print((1 / (1 + SpaceCounter)));
             //print(SpaceCounter);
-            return (1 / 2 * (1 + SpaceCounter));
+            return (1 / (5 + SpaceCounter));
         }
     }
     
@@ -163,13 +163,14 @@ public class PlayerMovements : MonoBehaviour
         }
         if (countingSpace)
         {
-            SpaceCounter += Time.deltaTime;
+            SpaceCounter += Time.deltaTime*20;
         }
         if (Input.GetKeyUp(KeyCode.Space))
         {
             JumpWhenPossible = false;
             WillJump.color = Color.white;
             countingSpace = false;
+            SpaceCounter = 0;
         }
     }
     
