@@ -17,10 +17,12 @@ public class PlayerMovements : MonoBehaviour
     float oldHorizontal;
     float currentV;
     float currentH;
+    float currentSpace;
+    float timenullifier;
     public float speed;
     public float MouseSpeed;
     public float JumpForce;
-    public float mySpeed = 5;
+    public float mySpeed = 10;
     public float AirAcceleration = 2;
     public float GroundAcceleration = 4;
     //bools
@@ -42,31 +44,32 @@ public class PlayerMovements : MonoBehaviour
         defaultFieldOfView = cam.fieldOfView;
         
     }
+    float compteur = 0;
     void FixedUpdate()
     {
-
-
+        timenullifier =  (1 / Time.timeScale);
         float vertical = MyGetAxis(true);
         float horizontal = MyGetAxis(false);
         CheckJump();
+        CheckLeftClick();
 
-        mySpeed = 10;
-        Vector3 desiredSpeed = transform.forward * vertical * mySpeed + transform.right * horizontal * mySpeed;
-        desiredSpeed = Vector3.ClampMagnitude(desiredSpeed, mySpeed);
+        Vector3 desiredSpeed = transform.forward * vertical * mySpeed*timenullifier + transform.right * horizontal * mySpeed*timenullifier;
+        desiredSpeed = Vector3.ClampMagnitude(desiredSpeed, mySpeed*timenullifier);
         Vector3 toAdd;
+        print(Physics.gravity.y * timenullifier * Time.fixedDeltaTime + jump + JumpFormula());
         if (grounded)
-            toAdd = new Vector3((desiredSpeed.x - myRigidBody.velocity.x) , jump + JumpFormula() , (desiredSpeed.z - myRigidBody.velocity.z));
+            toAdd = new Vector3((desiredSpeed.x - myRigidBody.velocity.x) , Physics.gravity.y * timenullifier*Time.fixedDeltaTime+jump + JumpFormula() , (desiredSpeed.z - myRigidBody.velocity.z));
         else
-            toAdd = new Vector3((desiredSpeed.x - myRigidBody.velocity.x) , jump + JumpFormula(), (desiredSpeed.z - myRigidBody.velocity.z) );
+            toAdd = new Vector3((desiredSpeed.x - myRigidBody.velocity.x) , Physics.gravity.y * timenullifier * Time.fixedDeltaTime+  jump + JumpFormula(), (desiredSpeed.z - myRigidBody.velocity.z) );
        
         myRigidBody.AddForce(toAdd, ForceMode.VelocityChange);
-        
-        float currentSpeed = Pythagore(myRigidBody.velocity.x, myRigidBody.velocity.z);
+        compteur += timenullifier * Time.fixedDeltaTime;
+        float currentSpeed = Pythagore(myRigidBody.velocity.x, myRigidBody.velocity.z)/timenullifier;
         DisplaySpeed.text = currentSpeed.ToString("#.##");
 
         cam.fieldOfView = defaultFieldOfView + currentSpeed;
         jump = 0.0f;
-        
+        CharacterController k;
     }
     /*
     void Mouselook()
@@ -99,7 +102,7 @@ public class PlayerMovements : MonoBehaviour
             else if (Input.GetKey(KeyCode.S))
                 current = -1;
             else current = 0;
-            currentV = Mathf.MoveTowards(currentV, current, Time.deltaTime*GetAcceleration());
+            currentV = Mathf.MoveTowards(currentV, current, Time.fixedDeltaTime*timenullifier*GetAcceleration());
             return currentV;
         }
         else
@@ -114,10 +117,11 @@ public class PlayerMovements : MonoBehaviour
             else if (Input.GetKey(KeyCode.Q))
                 current = -1;
             else current = 0;
-            currentH = Mathf.MoveTowards(currentH, current, Time.deltaTime*GetAcceleration());
+            currentH = Mathf.MoveTowards(currentH, current,  Time.fixedDeltaTime*timenullifier*GetAcceleration());
             return currentH;
         }
     }
+
     float GetAcceleration()
     {
         if (grounded)
@@ -135,8 +139,9 @@ public class PlayerMovements : MonoBehaviour
             return 0;
         else
         {
+            return 0;
             //print(SpaceCounter);
-            return (7 / (1 + SpaceCounter))*Time.deltaTime;
+            //return (7 / (1 + SpaceCounter))*timenullifier*Time.fixedDeltaTime;
         }
     }
     
@@ -145,14 +150,27 @@ public class PlayerMovements : MonoBehaviour
         currentH = 0;
         currentV = 0;
     }
+    void CheckLeftClick()
+    {
+        if (Input.GetMouseButtonDown(0))
+        {
+            TimeManager.ChangeTime(20);
+        }
+        else if (Input.GetMouseButtonUp(0))
+        {
+            TimeManager.ResetTime();
+        }
+    }
     void CheckJump()
     {
         if (Input.GetKeyDown(KeyCode.Space)){
+            
             JumpWhenPossible = true;
             WillJump.color = Color.green;
         }
         if(JumpWhenPossible&&grounded)
         {
+            compteur = 0;
             //sCheckSprint();
             JumpWhenPossible = false;
             WillJump.color = Color.white;
@@ -163,7 +181,7 @@ public class PlayerMovements : MonoBehaviour
         }
         if (countingSpace)
         {
-            SpaceCounter += Time.deltaTime;
+            SpaceCounter += timenullifier*Time.fixedDeltaTime;
         }
         if (Input.GetKeyUp(KeyCode.Space))
         {
@@ -181,7 +199,10 @@ public class PlayerMovements : MonoBehaviour
         if (angle < maxSlope)
         {
             if (!grounded)
+            {
                 grounded = true;
+                print("Compteur :" + compteur);
+            }
         }
         else if (angle < 90 + WallJumpSlope && angle > 90 - WallJumpSlope)
         {
