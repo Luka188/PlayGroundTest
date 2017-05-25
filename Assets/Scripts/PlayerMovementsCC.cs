@@ -11,14 +11,17 @@ public class PlayerMovementsCC : MonoBehaviour
     public float jumpHeight;
     public float airAcceleration;
     public float groundAcceleration;
+    public float JumpPushedForce;
 
     float myTimeDelta;
     float currentH;
     float currentV;
     float currentJ = 1;
+    float spaceCounter;
 
     //bools
     bool willJump;
+    bool countingSpace;
 
     //Unity Stuffs
     Transform myTransform;
@@ -38,7 +41,7 @@ public class PlayerMovementsCC : MonoBehaviour
         CheckLeftClick();
         Vector3 Acceleration = (myTransform.forward * vertical * speed + myTransform.right * horizontal * speed);
         Acceleration = Vector3.ClampMagnitude(Acceleration, speed)*myTimeDelta;
-        Acceleration += (myTransform.up * Physics.gravity.y + myTransform.up * currentJ) * myTimeDelta;
+        Acceleration += (myTransform.up * Physics.gravity.y + myTransform.up * currentJ+JumpFormula()*myTransform.up) * myTimeDelta;
         CC.Move(Acceleration);
         
         UpdateJump();
@@ -88,12 +91,26 @@ public class PlayerMovementsCC : MonoBehaviour
         {
             currentJ = jumpHeight;
             willJump = false;
+            countingSpace = true;
+        }
+        if (countingSpace)
+        {
+            spaceCounter += myTimeDelta;
         }
         if (Input.GetKeyUp(KeyCode.Space))
         {
             willJump = false;
+            countingSpace = false;
+            spaceCounter = 0;
         }
 
+    }
+    float JumpFormula()
+    {
+        if (spaceCounter == 0)
+            return 0;
+        else
+            return (JumpPushedForce / (1 + spaceCounter));
     }
     void UpdateJump()
     {
@@ -120,6 +137,7 @@ public class PlayerMovementsCC : MonoBehaviour
             TimeManager.ResetTime();
         }
     }
+
 
 
 
