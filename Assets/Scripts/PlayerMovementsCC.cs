@@ -12,20 +12,28 @@ public class PlayerMovementsCC : MonoBehaviour
     public float airAcceleration;
     public float groundAcceleration;
     public float JumpPushedForce;
+    public float SlopeToWallJump;
 
     float myTimeDelta;
     float currentH;
     float currentV;
     float currentJ = 1;
+    float currentWJ = 0;
     float spaceCounter;
 
     //bools
     bool willJump;
     bool countingSpace;
+    bool canWallJump;
+    bool wallJumping;
 
     //Unity Stuffs
+    public AnimationCurve WallCurve;
     Transform myTransform;
     CharacterController CC;
+    Vector3 lastWall;
+
+
     private void Start()
     {
         myTransform = transform;
@@ -39,11 +47,18 @@ public class PlayerMovementsCC : MonoBehaviour
         float horizontal = MyGetAxis(false);
         CheckJump();
         CheckLeftClick();
+
         Vector3 Acceleration = (myTransform.forward * vertical * speed + myTransform.right * horizontal * speed);
+        if(wallJumping)
+        {
+            Acceleration = (myTransform.forward * vertical * speed);
+        }
         Acceleration = Vector3.ClampMagnitude(Acceleration, speed)*myTimeDelta;
+        if (wallJumping)
+            Acceleration +=  lastWall* WallCurve.Evaluate(currentWJ) * speed * myTimeDelta;
         Acceleration += (myTransform.up * Physics.gravity.y + myTransform.up * currentJ+JumpFormula()*myTransform.up) * myTimeDelta;
         CC.Move(Acceleration);
-        
+
         UpdateJump();
     }
 
@@ -118,6 +133,15 @@ public class PlayerMovementsCC : MonoBehaviour
             currentJ -= myTimeDelta*jumpHeight;
         else
             currentJ = 1;
+        if (wallJumping)
+        {
+            currentWJ += myTimeDelta;
+            if (CC.isGrounded || currentWJ > 1)
+            {
+                currentWJ = 0;
+                wallJumping = false;
+            }
+        }
     }
     float GetAcceleration()
     {
@@ -138,7 +162,24 @@ public class PlayerMovementsCC : MonoBehaviour
         }
     }
 
-
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+       
+        if(Mathf.Abs(hit.normal.x)+Mathf.Abs(hit.normal.z)>SlopeToWallJump)
+        {
+            //WallJumping
+            if (willJump)
+            {
+                currentWJ = 0;
+                wallJumping = true;
+                lastWall = -new Vector3(hit.point.x - myTransform.position.x,0, hit.point.z - myTransform.position.z);
+                print(lastWall);
+                currentJ = jumpHeight;
+                willJump = false;
+                countingSpace = true;
+            }
+        }
+    }
 
 
 
