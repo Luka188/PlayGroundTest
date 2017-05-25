@@ -34,7 +34,8 @@ public class PlayerMovementsCC : MonoBehaviour
         myTimeDelta = Time.deltaTime * (1 / Time.timeScale);
         float vertical = MyGetAxis(true);
         float horizontal = MyGetAxis(false);
-        CheckJump(); 
+        CheckJump();
+        CheckLeftClick();
         Vector3 Acceleration = (myTransform.forward * vertical * speed + myTransform.right * horizontal * speed);
         Acceleration = Vector3.ClampMagnitude(Acceleration, speed)*myTimeDelta;
         Acceleration += (myTransform.up * Physics.gravity.y + myTransform.up * currentJ) * myTimeDelta;
@@ -108,9 +109,19 @@ public class PlayerMovementsCC : MonoBehaviour
         else
             return airAcceleration;
     }
+    void CheckLeftClick()
+    {
+        if (Input.GetMouseButtonDown(0))
+        {
+            TimeManager.ChangeTime(20);
+        }
+        else if (Input.GetMouseButtonUp(0))
+        {
+            TimeManager.ResetTime();
+        }
+    }
 
 
 
 
-    
 }
