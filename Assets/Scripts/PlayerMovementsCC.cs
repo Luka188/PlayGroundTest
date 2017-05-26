@@ -101,7 +101,8 @@ public class PlayerMovementsCC : MonoBehaviour
             else if (Input.GetKey(KeyCode.S))
                 current = -1;
             else current = 0;
-            currentV = Mathf.MoveTowards(currentV, current, myTimeDelta * GetAcceleration());
+            
+            currentV = Mathf.MoveTowards(currentV, current, myTimeDelta * GetAcceleration() * (current == 0 ? 0.5f : 1f));
             return currentV;
         }
         else
@@ -116,7 +117,7 @@ public class PlayerMovementsCC : MonoBehaviour
             else if (Input.GetKey(KeyCode.Q))
                 current = -1;
             else current = 0;
-            currentH = Mathf.MoveTowards(currentH, current, myTimeDelta * GetAcceleration());
+            currentH = Mathf.MoveTowards(currentH, current, myTimeDelta * GetAcceleration()/current==0? 2:1);
             return currentH;
         }
     }
