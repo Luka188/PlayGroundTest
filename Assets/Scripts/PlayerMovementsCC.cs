@@ -42,7 +42,7 @@ public class PlayerMovementsCC : MonoBehaviour
     Transform myTransform;
     CharacterController CC;
     Vector3 lastWall;
-    Vector3 redVector;
+    Vector3 redNormal;
 
 
     private void Start()
@@ -60,14 +60,13 @@ public class PlayerMovementsCC : MonoBehaviour
         CheckLeftClick();
 
         Vector3 Acceleration = (myTransform.forward * vertical * speed + myTransform.right * horizontal * speed);
+       
         if(wallJumping)
         {
-            
-
-            if (GetAngle(redVector, Acceleration) > 0 && timeInAir < 0.7f) 
+            if (NeedCorrection(Acceleration) && timeInAir < 0.7f) 
             {
-                print(GetAngle(redVector, Acceleration));
-                Acceleration = Vector2.Dot(redVector, Acceleration) * redVector;
+                //print(GetAngle(redVector, Acceleration));
+                Acceleration = Vector2.Dot(new Vector2(redNormal.z,redNormal.x), Acceleration) * new Vector2(redNormal.z, redNormal.x);
             }
         }
         if(velJumping)
@@ -80,11 +79,13 @@ public class PlayerMovementsCC : MonoBehaviour
         UpdateVelJump();
         UpdateJump();
     }
-    float GetAngle(Vector3 V1, Vector3 V2)
+    bool NeedCorrection(Vector3 Acc)
     {
-        float toreturn = Vector3.Angle(V1, V2);
-        Vector3 cross = Vector3.Cross(V1, V2);
-        return cross.y < 0 ? -toreturn : toreturn;
+        Vector2 minus = new Vector2(Acc.x - redNormal.x, Acc.z - redNormal.z);
+        Vector2 add = new Vector2(Acc.x + redNormal.x, Acc.z + redNormal.z);
+        //print("minus" + minus.magnitude );
+        //print("add" + add.magnitude);
+        return minus.magnitude > add.magnitude;
     }
 
     float MyGetAxis(bool Vertical)
@@ -117,7 +118,7 @@ public class PlayerMovementsCC : MonoBehaviour
             else if (Input.GetKey(KeyCode.Q))
                 current = -1;
             else current = 0;
-            currentH = Mathf.MoveTowards(currentH, current, myTimeDelta * GetAcceleration()/current==0? 2:1);
+            currentH = Mathf.MoveTowards(currentH, current, myTimeDelta * GetAcceleration() * (current == 0 ? 0.5f : 1f));
             return currentH;
         }
     }
@@ -225,7 +226,8 @@ public class PlayerMovementsCC : MonoBehaviour
                 currentWJ = 0;
                 wallJumping = true;
                 lastWall = -new Vector3(hit.point.x - myTransform.position.x,0, hit.point.z - myTransform.position.z);
-                redVector = new Vector2(hit.normal.z, hit.normal.x);
+                redNormal = hit.normal;
+                Debug.DrawLine(hit.point, hit.point + hit.normal,Color.red,2);
                 Jump();
             }
         }
