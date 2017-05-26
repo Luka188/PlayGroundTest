@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerMovementsCC : MonoBehaviour
 {
@@ -13,6 +14,7 @@ public class PlayerMovementsCC : MonoBehaviour
     public float groundAcceleration;
     public float JumpPushedForce;
     public float SlopeToWallJump;
+    public float VelocityAddition;
 
     float myTimeDelta;
     float currentH;
@@ -21,16 +23,22 @@ public class PlayerMovementsCC : MonoBehaviour
     float currentWJ = 0;
     float spaceCounter;
     float timeInAir = 0;
+    float VelJumpAddCounter = 0;
 
     //bools
     bool willJump;
     bool countingSpace;
     bool canWallJump;
     bool wallJumping;
+    bool velJumping;
 
     //Unity Stuffs
     public AnimationCurve WallCurve;
     public AnimationCurve FallinCurve;
+    public AnimationCurve VelJump;
+    [SerializeField]
+    RawImage JumpingVisual;
+
     Transform myTransform;
     CharacterController CC;
     Vector3 lastWall;
@@ -62,12 +70,14 @@ public class PlayerMovementsCC : MonoBehaviour
                 Acceleration = Vector2.Dot(redVector, Acceleration) * redVector;
             }
         }
-        Acceleration = Vector3.ClampMagnitude(Acceleration, speed)*myTimeDelta;
+        if(velJumping)
+            Acceleration *= VelJump.Evaluate(VelJumpAddCounter)*(VelocityAddition/2);
+        Acceleration = Vector3.ClampMagnitude(Acceleration, speed* VelJump.Evaluate(VelJumpAddCounter)*VelocityAddition)*myTimeDelta;
         if (wallJumping)
             Acceleration +=  lastWall* WallCurve.Evaluate(currentWJ) * speed * myTimeDelta;
         Acceleration += (myTransform.up * Physics.gravity.y * FallinCurve.Evaluate(timeInAir) + myTransform.up * currentJ + JumpFormula()*myTransform.up) * myTimeDelta;
         CC.Move(Acceleration);
-
+        UpdateVelJump();
         UpdateJump();
     }
     float GetAngle(Vector3 V1, Vector3 V2)
@@ -114,13 +124,12 @@ public class PlayerMovementsCC : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
+            JumpingVisual.color = Color.green;
             willJump = true;
         }
         if (willJump&&CC.isGrounded)
         {
-            currentJ = jumpHeight;
-            willJump = false;
-            countingSpace = true;
+            Jump();
         }
         if (countingSpace)
         {
@@ -128,11 +137,22 @@ public class PlayerMovementsCC : MonoBehaviour
         }
         if (Input.GetKeyUp(KeyCode.Space))
         {
+            JumpingVisual.color = Color.white;
             willJump = false;
             countingSpace = false;
             spaceCounter = 0;
         }
 
+    }
+    void Jump()
+    {
+        JumpingVisual.color = Color.white;
+        currentJ = jumpHeight;
+        willJump = false;
+        countingSpace = true;
+        timeInAir = 0;
+        velJumping = true;
+        VelJumpAddCounter = 0;
     }
     float JumpFormula()
     {
@@ -159,6 +179,18 @@ public class PlayerMovementsCC : MonoBehaviour
             {
                 currentWJ = 0;
                 wallJumping = false;
+            }
+        }
+    }
+    void UpdateVelJump()
+    {
+        if (velJumping)
+        {
+            VelJumpAddCounter += myTimeDelta;
+            if (VelJumpAddCounter > 1)
+            {
+                velJumping = false;
+                VelJumpAddCounter = 0;
             }
         }
     }
@@ -193,11 +225,7 @@ public class PlayerMovementsCC : MonoBehaviour
                 wallJumping = true;
                 lastWall = -new Vector3(hit.point.x - myTransform.position.x,0, hit.point.z - myTransform.position.z);
                 redVector = new Vector2(hit.normal.z, hit.normal.x);
-                currentJ = jumpHeight;
-                timeInAir = 0;
-                willJump = false;
-                countingSpace = true;
-                Debug.DrawLine(hit.point, hit.point+ redVector, Color.red, 5);
+                Jump();
             }
         }
     }
