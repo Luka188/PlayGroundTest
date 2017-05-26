@@ -20,6 +20,7 @@ public class PlayerMovementsCC : MonoBehaviour
     float currentJ = 1;
     float currentWJ = 0;
     float spaceCounter;
+    float timeInAir = 0;
 
     //bools
     bool willJump;
@@ -29,9 +30,11 @@ public class PlayerMovementsCC : MonoBehaviour
 
     //Unity Stuffs
     public AnimationCurve WallCurve;
+    public AnimationCurve FallinCurve;
     Transform myTransform;
     CharacterController CC;
     Vector3 lastWall;
+    Vector3 redVector;
 
 
     private void Start()
@@ -51,17 +54,28 @@ public class PlayerMovementsCC : MonoBehaviour
         Vector3 Acceleration = (myTransform.forward * vertical * speed + myTransform.right * horizontal * speed);
         if(wallJumping)
         {
-            Acceleration = (myTransform.forward * vertical * speed);
+            
+
+            if (GetAngle(redVector, Acceleration) > 0 && timeInAir < 0.7f) 
+            {
+                print(GetAngle(redVector, Acceleration));
+                Acceleration = Vector2.Dot(redVector, Acceleration) * redVector;
+            }
         }
         Acceleration = Vector3.ClampMagnitude(Acceleration, speed)*myTimeDelta;
         if (wallJumping)
             Acceleration +=  lastWall* WallCurve.Evaluate(currentWJ) * speed * myTimeDelta;
-        Acceleration += (myTransform.up * Physics.gravity.y + myTransform.up * currentJ+JumpFormula()*myTransform.up) * myTimeDelta;
+        Acceleration += (myTransform.up * Physics.gravity.y * FallinCurve.Evaluate(timeInAir) + myTransform.up * currentJ + JumpFormula()*myTransform.up) * myTimeDelta;
         CC.Move(Acceleration);
 
         UpdateJump();
     }
-
+    float GetAngle(Vector3 V1, Vector3 V2)
+    {
+        float toreturn = Vector3.Angle(V1, V2);
+        Vector3 cross = Vector3.Cross(V1, V2);
+        return cross.y < 0 ? -toreturn : toreturn;
+    }
 
     float MyGetAxis(bool Vertical)
     {
@@ -125,10 +139,15 @@ public class PlayerMovementsCC : MonoBehaviour
         if (spaceCounter == 0)
             return 0;
         else
-            return (JumpPushedForce / (1 + spaceCounter));
+            return JumpPushedForce  / (1 + spaceCounter);
     }
     void UpdateJump()
     {
+        if (CC.isGrounded && timeInAir > 0)
+            timeInAir = 0;
+        if (!CC.isGrounded)
+            timeInAir += myTimeDelta;
+       // print(FallinCurve.Evaluate(timeInAir));
         if (currentJ > 1)
             currentJ -= myTimeDelta*jumpHeight;
         else
@@ -173,13 +192,16 @@ public class PlayerMovementsCC : MonoBehaviour
                 currentWJ = 0;
                 wallJumping = true;
                 lastWall = -new Vector3(hit.point.x - myTransform.position.x,0, hit.point.z - myTransform.position.z);
-                print(lastWall);
+                redVector = new Vector2(hit.normal.z, hit.normal.x);
                 currentJ = jumpHeight;
+                timeInAir = 0;
                 willJump = false;
                 countingSpace = true;
+                Debug.DrawLine(hit.point, hit.point+ redVector, Color.red, 5);
             }
         }
     }
+
 
 
 
