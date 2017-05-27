@@ -15,6 +15,7 @@ public class PlayerMovementsCC : MonoBehaviour
     public float JumpPushedForce;
     public float SlopeToWallJump;
     public float VelocityAddition;
+    public float WallJumpingForce;
 
     float myTimeDelta;
     float currentH;
@@ -62,8 +63,8 @@ public class PlayerMovementsCC : MonoBehaviour
         CheckLeftClick();
 
         Vector3 Acceleration = (myTransform.forward * vertical * speed + myTransform.right * horizontal * speed);
-       
-        if(wallJumping)
+        Acceleration = Vector3.ClampMagnitude(Acceleration, speed);
+        if (wallJumping)
         {
             if (NeedCorrection(Acceleration))
             {
@@ -72,15 +73,21 @@ public class PlayerMovementsCC : MonoBehaviour
                 Vector3 Correction = Vector2.Dot(new Vector2(redNormal.z,redNormal.x), Acceleration) * new Vector2(redNormal.z, redNormal.x)*WallCurve.Evaluate(timeInAir);
                 Vector3 NewAcc= Acceleration*(1-WallCurve.Evaluate(timeInAir));
                 Acceleration = new Vector3(Correction.x + NewAcc.x, Correction.y + NewAcc.y, Correction.z + NewAcc.z);
+                Debug.DrawLine(transform.position, transform.position + Acceleration, vertical==1&&horizontal==1? Color.red:Color.green, 10);
             }
         }
         if (velJumping)
-            Acceleration += (myTransform.forward * vertical + myTransform.right * horizontal) * VelJump.Evaluate(VelJumpAddCounter) * (VelocityAddition );
-        Acceleration = Vector3.ClampMagnitude(Acceleration, speed + (velJumping ? VelJump.Evaluate(VelJumpAddCounter) * (VelocityAddition):0)) *myTimeDelta;
+        {
+            Vector3 prev = Vector3.ClampMagnitude(myTransform.forward * vertical + myTransform.right * horizontal,1) ;
+            Acceleration += prev * VelJump.Evaluate(VelJumpAddCounter) * (VelocityAddition);
+
+        }
+            Acceleration = Vector3.ClampMagnitude(Acceleration, speed + (velJumping ? VelJump.Evaluate(VelJumpAddCounter) * (VelocityAddition):0)) *myTimeDelta;
         if (wallJumping)
-            Acceleration +=  lastWall* WallCurve.Evaluate(currentWJ) * speed * myTimeDelta;
+            Acceleration +=  lastWall* WallCurve.Evaluate(currentWJ) * WallJumpingForce * myTimeDelta;
         Acceleration += (myTransform.up * Physics.gravity.y * FallinCurve.Evaluate(timeInAir) + myTransform.up * currentJ + JumpFormula()*myTransform.up) * myTimeDelta;
         CC.Move(Acceleration);
+        Debug.DrawLine(transform.position, transform.position + Acceleration, vertical == 1 && horizontal == 1 ? Color.red : Color.green, 10);
         UpdateVelJump();
         UpdateJump();
         float p = Pythagore(Acceleration.x / myTimeDelta, Acceleration.z / myTimeDelta);
@@ -234,12 +241,12 @@ public class PlayerMovementsCC : MonoBehaviour
             if (willJump)
             {
                 currentWJ = 0;
-                currentH = 0;
                 wallJumping = true;
                 lastWall = -new Vector3(hit.point.x - myTransform.position.x,0, hit.point.z - myTransform.position.z);
                 redNormal = hit.normal;
                 Debug.DrawLine(hit.point, hit.point + hit.normal,Color.red,2);
                 Jump();
+                currentJ = 13;
             }
         }
     }
