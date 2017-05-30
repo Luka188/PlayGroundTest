@@ -25,13 +25,14 @@ public class PlayerMovementsCC : MonoBehaviour
     float spaceCounter;
     float timeInAir = 0;
     float VelJumpAddCounter = 0;
+    float CurrentSlide = 0;
 
     //bools
     bool willJump;
     bool countingSpace;
     bool canWallJump;
-    bool wallJumping;
-    bool velJumping;
+    bool willSlide;
+    bool applyGravity = true;
 
     //Unity Stuffs
     public AnimationCurve WallCurve;
@@ -47,7 +48,6 @@ public class PlayerMovementsCC : MonoBehaviour
     Vector3 lastWall;
     Vector3 redNormal;
 
-
     private void Start()
     {
         myTransform = transform;
@@ -61,33 +61,44 @@ public class PlayerMovementsCC : MonoBehaviour
         float horizontal = MyGetAxis(false);
         CheckJump();
         CheckLeftClick();
-
+        CheckSlide();
         Vector3 Acceleration = (myTransform.forward * vertical * speed + myTransform.right * horizontal * speed);
         Acceleration = Vector3.ClampMagnitude(Acceleration, speed);
-        if (wallJumping)
+        applyGravity = true;
+        if (MovementState.WallJumping)
         {
             if (NeedCorrection(Acceleration))
             {
-                //print(GetAngle(redVector, Acceleration));
-
                 Vector3 Correction = Vector2.Dot(new Vector2(redNormal.z,redNormal.x), Acceleration) * new Vector2(redNormal.z, redNormal.x)*WallCurve.Evaluate(timeInAir);
                 Vector3 NewAcc= Acceleration*(1-WallCurve.Evaluate(timeInAir));
                 Acceleration = new Vector3(Correction.x + NewAcc.x, Correction.y + NewAcc.y, Correction.z + NewAcc.z);
                 Debug.DrawLine(transform.position, transform.position + Acceleration, vertical==1&&horizontal==1? Color.red:Color.green, 10);
             }
         }
-        if (velJumping)
+        else if (MovementState.Sliding)
+        {
+            if (CheckStillOnWall())
+            {
+                Acceleration = (myTransform.forward * speed );
+                Acceleration = Vector2.Dot(new Vector2(redNormal.z, redNormal.x), Acceleration)* new Vector3(redNormal.z, 0, -redNormal.x) * speed; ;
+                applyGravity = false;
+            }
+        }
+        else if (MovementState.GroundSliding)
+        {
+            Acceleration = Acceleration * VelJump.Evaluate(CurrentSlide / 2);
+        }
+        if (MovementState.VelJumping)
         {
             Vector3 prev = Vector3.ClampMagnitude(myTransform.forward * vertical + myTransform.right * horizontal,1) ;
             Acceleration += prev * VelJump.Evaluate(VelJumpAddCounter) * (VelocityAddition);
-
         }
-            Acceleration = Vector3.ClampMagnitude(Acceleration, speed + (velJumping ? VelJump.Evaluate(VelJumpAddCounter) * (VelocityAddition):0)) *myTimeDelta;
-        if (wallJumping)
-            Acceleration +=  lastWall* WallCurve.Evaluate(currentWJ) * WallJumpingForce * myTimeDelta;
-        Acceleration += (myTransform.up * Physics.gravity.y * FallinCurve.Evaluate(timeInAir) + myTransform.up * currentJ + JumpFormula()*myTransform.up) * myTimeDelta;
+        Acceleration = Vector3.ClampMagnitude(Acceleration, speed + (MovementState.VelJumping ? VelJump.Evaluate(VelJumpAddCounter) * (VelocityAddition):0)) *myTimeDelta;
+        if (MovementState.WallJumping&&!MovementState.Sliding)
+            Acceleration +=  lastWall* WallCurve.Evaluate(currentWJ) * WallJumpingForce*myTimeDelta;
+        if(applyGravity)
+            Acceleration += (myTransform.up * Physics.gravity.y * FallinCurve.Evaluate(timeInAir) + myTransform.up * currentJ + JumpFormula()*myTransform.up) * myTimeDelta;
         CC.Move(Acceleration);
-        Debug.DrawLine(transform.position, transform.position + Acceleration, vertical == 1 && horizontal == 1 ? Color.red : Color.green, 10);
         UpdateVelJump();
         UpdateJump();
         float p = Pythagore(Acceleration.x / myTimeDelta, Acceleration.z / myTimeDelta);
@@ -97,8 +108,6 @@ public class PlayerMovementsCC : MonoBehaviour
     {
         Vector2 minus = new Vector2(Acc.x - redNormal.x, Acc.z - redNormal.z);
         Vector2 add = new Vector2(Acc.x + redNormal.x, Acc.z + redNormal.z);
-        //print("minus" + minus.magnitude );
-        //print("add" + add.magnitude);
         return minus.magnitude > add.magnitude;
     }
     float Pythagore(float x, float y)
@@ -139,6 +148,34 @@ public class PlayerMovementsCC : MonoBehaviour
             return currentH;
         }
     }
+    void CheckSlide()
+    {
+        if (Input.GetKey(KeyCode.LeftShift)&&!MovementState.Sliding&&!MovementState.GroundSliding)
+        {
+            willSlide = true;
+            speed = 13f;
+            CurrentSlide = 0;
+        }
+        if (willSlide && CC.isGrounded)
+        {
+            CC.height = 0;
+            willSlide = false;
+            MovementState.GroundSliding = true;
+        }
+        if (MovementState.GroundSliding)
+        {
+            CurrentSlide += myTimeDelta;
+        }
+        if (Input.GetKeyUp(KeyCode.LeftShift)&&MovementState.GroundSliding)
+        {
+            MovementState.GroundSliding = false;
+            willSlide = false;
+            MovementState.Sliding = false;
+            CC.height = 1;
+            speed = 10f;
+            CurrentSlide = 0;
+        }
+    }
     void CheckJump()
     {
         if (Input.GetKeyDown(KeyCode.Space))
@@ -163,6 +200,25 @@ public class PlayerMovementsCC : MonoBehaviour
         }
 
     }
+    bool CheckStillOnWall()
+    {
+        RaycastHit hitRay;
+        Debug.DrawLine(transform.position, transform.position -redNormal*4, Color.red);
+        if (Physics.Raycast(myTransform.position, -redNormal, out hitRay,2))
+        {
+            MovementState.Sliding = true;
+            redNormal = hitRay.normal;
+            CheckWallJump(hitRay.normal, hitRay.point);
+            return true;
+        }
+        else
+        {
+            MovementState.Sliding = false;
+            speed = 10f;
+            return false;
+        }
+        
+    }
     void Jump()
     {
         JumpingVisual.color = Color.white;
@@ -170,7 +226,7 @@ public class PlayerMovementsCC : MonoBehaviour
         willJump = false;
         countingSpace = true;
         timeInAir = 0;
-        velJumping = true;
+        MovementState.VelJumping = true;
         VelJumpAddCounter = 0;
     }
     float JumpFormula()
@@ -186,29 +242,28 @@ public class PlayerMovementsCC : MonoBehaviour
             timeInAir = 0;
         if (!CC.isGrounded)
             timeInAir += myTimeDelta;
-       // print(FallinCurve.Evaluate(timeInAir));
         if (currentJ > 1)
             currentJ -= myTimeDelta*jumpHeight;
         else
             currentJ = 1;
-        if (wallJumping)
+        if (MovementState.WallJumping)
         {
             currentWJ += myTimeDelta;
             if (CC.isGrounded || currentWJ > 1)
             {
                 currentWJ = 0;
-                wallJumping = false;
+                MovementState.WallJumping = false;
             }
         }
     }
     void UpdateVelJump()
     {
-        if (velJumping)
+        if (MovementState.VelJumping)
         {
             VelJumpAddCounter += myTimeDelta;
             if (VelJumpAddCounter > 1)
             {
-                velJumping = false;
+                MovementState.VelJumping = false;
                 VelJumpAddCounter = 0;
             }
         }
@@ -231,22 +286,37 @@ public class PlayerMovementsCC : MonoBehaviour
             TimeManager.ResetTime();
         }
     }
-
+    bool CheckWallJump(Vector3 normal, Vector3 Point)
+    {
+        if (willJump)
+        {
+            currentWJ = 0;
+            MovementState.WallJumping = true;
+            lastWall = -new Vector3(Point.x - myTransform.position.x, 0, Point.z - myTransform.position.z);
+            redNormal = normal;
+            Debug.DrawLine(Point, Point + normal, Color.red, 2);
+            Jump();
+            currentJ = 13;
+            return true;
+        }
+        else
+            return false;
+    }
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
-       
         if(Mathf.Abs(hit.normal.x)+Mathf.Abs(hit.normal.z)>SlopeToWallJump)
         {
-            //WallJumping
-            if (willJump)
+            if (CheckWallJump(hit.normal, hit.point))
             {
-                currentWJ = 0;
-                wallJumping = true;
-                lastWall = -new Vector3(hit.point.x - myTransform.position.x,0, hit.point.z - myTransform.position.z);
+                
+            }
+            else if (willSlide)
+            {
+                willSlide = false;
+                print("Sliding");
+                MovementState.Sliding = true;
                 redNormal = hit.normal;
-                Debug.DrawLine(hit.point, hit.point + hit.normal,Color.red,2);
-                Jump();
-                currentJ = 13;
+                MovementState.VelJumping = true;
             }
         }
     }
