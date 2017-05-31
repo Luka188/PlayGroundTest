@@ -12,12 +12,14 @@ public class MovementState {
     public static bool VelJumping { get { return velJumping; } set { velJumping = value; } }
     static bool groundSiding;
     public static bool GroundSliding { get { return groundSiding; } set { if (value) ResetMovement(); groundSiding = value; } }
-
+    static bool sledging;
+    public static bool Sledging { get { return sledging; } set { if (value) ResetMovement(); sledging = value; } }
 
     static void ResetMovement()
     {
         sliding = false;
         wallJumping = false;
         groundSiding = false;
+        sledging = false;
     }
 }

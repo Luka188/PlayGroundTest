@@ -16,6 +16,7 @@ public class PlayerMovementsCC : MonoBehaviour
     public float SlopeToWallJump;
     public float VelocityAddition;
     public float WallJumpingForce;
+    public float SledgingSpeed;
 
     float myTimeDelta;
     float currentH;
@@ -26,6 +27,7 @@ public class PlayerMovementsCC : MonoBehaviour
     float timeInAir = 0;
     float VelJumpAddCounter = 0;
     float CurrentSlide = 0;
+    float currentSledging = 0;
 
     //bools
     bool willJump;
@@ -47,11 +49,19 @@ public class PlayerMovementsCC : MonoBehaviour
     CharacterController CC;
     Vector3 lastWall;
     Vector3 redNormal;
+    Vector3 glissadeDir;
+    Camera cam;
+    [SerializeField]
+    ParticleSystem SpeedParts;
+    [SerializeField]
+    ParticleSystem WallSparkles;
 
     private void Start()
     {
         myTransform = transform;
         CC = myTransform.GetComponent<CharacterController>();
+        cam = myTransform.GetChild(0).GetComponent<Camera>();
+
     }
     // Update is called once per frame
     void Update()
@@ -79,21 +89,28 @@ public class PlayerMovementsCC : MonoBehaviour
         {
             if (CheckStillOnWall())
             {
-                Acceleration = (myTransform.forward * speed );
+                Acceleration = (glissadeDir * speed );
                 Acceleration = Vector2.Dot(new Vector2(redNormal.z, redNormal.x), Acceleration)* new Vector3(redNormal.z, 0, -redNormal.x) * speed; ;
                 applyGravity = false;
             }
         }
         else if (MovementState.GroundSliding)
         {
+            Acceleration = (glissadeDir * vertical * speed);
             Acceleration = Acceleration * VelJump.Evaluate(CurrentSlide / 2);
         }
+      
         if (MovementState.VelJumping)
         {
-            Vector3 prev = Vector3.ClampMagnitude(myTransform.forward * vertical + myTransform.right * horizontal,1) ;
+            Vector3 prev = Vector3.ClampMagnitude(myTransform.forward * vertical + myTransform.right * horizontal,1);
             Acceleration += prev * VelJump.Evaluate(VelJumpAddCounter) * (VelocityAddition);
         }
         Acceleration = Vector3.ClampMagnitude(Acceleration, speed + (MovementState.VelJumping ? VelJump.Evaluate(VelJumpAddCounter) * (VelocityAddition):0)) *myTimeDelta;
+        if (MovementState.Sledging)
+        {
+            Acceleration = (glissadeDir * vertical * speed);
+            Acceleration *= FallinCurve.Evaluate(currentSledging / 4) * SledgingSpeed;
+        }
         if (MovementState.WallJumping&&!MovementState.Sliding)
             Acceleration +=  lastWall* WallCurve.Evaluate(currentWJ) * WallJumpingForce*myTimeDelta;
         if(applyGravity)
@@ -102,6 +119,7 @@ public class PlayerMovementsCC : MonoBehaviour
         UpdateVelJump();
         UpdateJump();
         float p = Pythagore(Acceleration.x / myTimeDelta, Acceleration.z / myTimeDelta);
+        CheckSpeedParticles(Acceleration);
         DisplaySpeed.text = p.ToString("#.##");
     }
     bool NeedCorrection(Vector3 Acc)
@@ -148,32 +166,76 @@ public class PlayerMovementsCC : MonoBehaviour
             return currentH;
         }
     }
+    float Pythagore3D(float x, float y, float z)
+    {
+        return Mathf.Sqrt(x * x + y * y + z * z);
+    }
+    void CheckSpeedParticles(Vector3 acc)
+    {
+        float vitesse;
+        acc /= myTimeDelta;
+        if (timeInAir > 0)
+            vitesse = Pythagore3D(acc.x , acc.y , acc.z );
+        else
+            vitesse = Pythagore(acc.x, acc.z);
+        if (vitesse > 14)
+        {
+            
+            var k = SpeedParts.emission;
+            k.rateOverTime = (vitesse - 10)+2;
+            k.enabled = true;
+            
+        }
+        else if (SpeedParts.emission.enabled)
+        {
+            var k = SpeedParts.emission;
+            k.enabled = false;
+
+        }
+            
+    }
     void CheckSlide()
     {
-        if (Input.GetKey(KeyCode.LeftShift)&&!MovementState.Sliding&&!MovementState.GroundSliding)
+        if (Input.GetKey(KeyCode.LeftShift)&&!MovementState.Sliding&&!MovementState.GroundSliding&&CurrentSlide==0)
         {
             willSlide = true;
             speed = 13f;
-            CurrentSlide = 0;
+            
         }
         if (willSlide && CC.isGrounded)
         {
             CC.height = 0;
             willSlide = false;
             MovementState.GroundSliding = true;
+            glissadeDir = transform.forward;
+            
         }
         if (MovementState.GroundSliding)
         {
             CurrentSlide += myTimeDelta;
         }
-        if (Input.GetKeyUp(KeyCode.LeftShift)&&MovementState.GroundSliding)
+        if (CurrentSlide>1)
         {
-            MovementState.GroundSliding = false;
-            willSlide = false;
-            MovementState.Sliding = false;
-            CC.height = 1;
             speed = 10f;
-            CurrentSlide = 0;
+            CC.height = (CurrentSlide-1) * 5;
+            if (CC.height > 1)
+            {
+                CC.height = 1;
+                MovementState.GroundSliding = false;
+                willSlide = false;
+                MovementState.Sliding = false;
+                CC.height = 1;
+                CurrentSlide = 0;
+            }
+
+        }
+        if (MovementState.Sledging)
+        {
+            currentSledging += myTimeDelta;
+        }
+        else if(currentSledging>0)
+        {
+            currentSledging -= myTimeDelta * 3;
         }
     }
     void CheckJump()
@@ -202,21 +264,29 @@ public class PlayerMovementsCC : MonoBehaviour
     }
     bool CheckStillOnWall()
     {
-        RaycastHit hitRay;
-        Debug.DrawLine(transform.position, transform.position -redNormal*4, Color.red);
-        if (Physics.Raycast(myTransform.position, -redNormal, out hitRay,2))
+        if (Input.GetKey(KeyCode.LeftShift))
         {
-            MovementState.Sliding = true;
-            redNormal = hitRay.normal;
-            CheckWallJump(hitRay.normal, hitRay.point);
-            return true;
+            RaycastHit hitRay;
+            Debug.DrawLine(transform.position, transform.position - redNormal * 4, Color.red);
+            if (Physics.Raycast(myTransform.position, -redNormal, out hitRay, 2))
+            {
+                MovementState.Sliding = true;
+                redNormal = hitRay.normal;
+                CheckWallJump(hitRay.normal, hitRay.point);
+               
+                return true;
+            }
+            else
+            {
+                MovementState.Sliding = false;
+                WallSparkles.Stop();
+                speed = 10f;
+                return false;
+            }
         }
-        else
-        {
-            MovementState.Sliding = false;
-            speed = 10f;
-            return false;
-        }
+        WallSparkles.Stop();
+        MovementState.Sliding = false;
+        return false;
         
     }
     void Jump()
@@ -290,6 +360,7 @@ public class PlayerMovementsCC : MonoBehaviour
     {
         if (willJump)
         {
+            WallSparkles.Stop();
             currentWJ = 0;
             MovementState.WallJumping = true;
             lastWall = -new Vector3(Point.x - myTransform.position.x, 0, Point.z - myTransform.position.z);
@@ -304,11 +375,13 @@ public class PlayerMovementsCC : MonoBehaviour
     }
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
+        print(Mathf.Abs(hit.normal.x) + Mathf.Abs(hit.normal.z) > SlopeToWallJump);
         if(Mathf.Abs(hit.normal.x)+Mathf.Abs(hit.normal.z)>SlopeToWallJump)
         {
             if (CheckWallJump(hit.normal, hit.point))
             {
-                
+                if (WallSparkles.isPlaying)
+                    WallSparkles.Stop();
             }
             else if (willSlide)
             {
@@ -316,9 +389,23 @@ public class PlayerMovementsCC : MonoBehaviour
                 print("Sliding");
                 MovementState.Sliding = true;
                 redNormal = hit.normal;
+                glissadeDir = transform.forward;
+                if(Vector3.Distance(myTransform.right,hit.point)<Vector3.Distance(-myTransform.right,hit.point))
+                {
+                    WallSparkles.transform.localPosition = new Vector3( -.5f, -0.45f, 0);
+                    WallSparkles.transform.localEulerAngles = new Vector3(0, 90, 0);
+                    
+                }
+                else
+                {
+                    WallSparkles.transform.localPosition = new Vector3(0.5f, -0.45f, 0);
+                    WallSparkles.transform.localEulerAngles = new Vector3(0, -90, 0);
+                }
+                WallSparkles.Play(true);
                 MovementState.VelJumping = true;
             }
         }
+
     }
 
 
