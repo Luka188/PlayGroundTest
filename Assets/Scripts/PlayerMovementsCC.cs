@@ -55,13 +55,15 @@ public class PlayerMovementsCC : MonoBehaviour
     ParticleSystem SpeedParts;
     [SerializeField]
     ParticleSystem WallSparkles;
+    [SerializeField]
+    ForceRotation ForceRot;
 
     private void Start()
     {
         myTransform = transform;
         CC = myTransform.GetComponent<CharacterController>();
         cam = myTransform.GetChild(0).GetComponent<Camera>();
-
+   
     }
     // Update is called once per frame
     void Update()
@@ -393,13 +395,13 @@ public class PlayerMovementsCC : MonoBehaviour
                 if(Vector3.Distance(myTransform.right,hit.point)<Vector3.Distance(-myTransform.right,hit.point))
                 {
                     WallSparkles.transform.localPosition = new Vector3( -.5f, -0.45f, 0);
-                    WallSparkles.transform.localEulerAngles = new Vector3(0, 90, 0);
+                    ForceRot.SetRotWithNormal(hit.normal);
                     
                 }
                 else
                 {
                     WallSparkles.transform.localPosition = new Vector3(0.5f, -0.45f, 0);
-                    WallSparkles.transform.localEulerAngles = new Vector3(0, -90, 0);
+                    ForceRot.SetRotWithNormal(hit.normal);
                 }
                 WallSparkles.Play(true);
                 MovementState.VelJumping = true;
