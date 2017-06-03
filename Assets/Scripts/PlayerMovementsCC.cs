@@ -17,6 +17,8 @@ public class PlayerMovementsCC : MonoBehaviour
     public float VelocityAddition;
     public float WallJumpingForce;
     public float SledgingSpeed;
+    public float speedToAddEachJump;
+    public float speedLosingGround;
 
     float myTimeDelta;
     float currentH;
@@ -24,11 +26,11 @@ public class PlayerMovementsCC : MonoBehaviour
     float currentJ = 1;
     float currentWJ = 0;
     float spaceCounter;
+    float additionalSpeed = 0;
     float timeInAir = 0;
-    float VelJumpAddCounter = 0;
     float CurrentSlide = 0;
     float currentSledging = 0;
-
+   
     //bools
     bool willJump;
     bool countingSpace;
@@ -47,7 +49,6 @@ public class PlayerMovementsCC : MonoBehaviour
 
     Transform myTransform;
     CharacterController CC;
-    Vector3 lastWall;
     Vector3 redNormal;
     Vector3 glissadeDir;
     Camera cam;
@@ -57,6 +58,8 @@ public class PlayerMovementsCC : MonoBehaviour
     ParticleSystem WallSparkles;
     [SerializeField]
     ForceRotation ForceRot;
+
+    GameObject LastWall;
 
     private void Start()
     {
@@ -72,63 +75,53 @@ public class PlayerMovementsCC : MonoBehaviour
         float vertical = MyGetAxis(true);
         float horizontal = MyGetAxis(false);
         CheckJump();
-        CheckLeftClick();
+        //CheckLeftClick();
         CheckSlide();
-        Vector3 Acceleration = (myTransform.forward * vertical * speed + myTransform.right * horizontal * speed);
-        Acceleration = Vector3.ClampMagnitude(Acceleration, speed);
+        Vector3 Acceleration = (myTransform.forward * vertical  + myTransform.right * horizontal );
+        Acceleration = Vector3.ClampMagnitude(Acceleration, 1);
         applyGravity = true;
         if (MovementState.WallJumping)
         {
-            if (NeedCorrection(Acceleration))
-            {
-                Vector3 Correction = Vector2.Dot(new Vector2(redNormal.z,redNormal.x), Acceleration) * new Vector2(redNormal.z, redNormal.x)*WallCurve.Evaluate(timeInAir);
-                Vector3 NewAcc= Acceleration*(1-WallCurve.Evaluate(timeInAir));
-                Acceleration = new Vector3(Correction.x + NewAcc.x, Correction.y + NewAcc.y, Correction.z + NewAcc.z);
-                Debug.DrawLine(transform.position, transform.position + Acceleration, vertical==1&&horizontal==1? Color.red:Color.green, 10);
-            }
+
         }
         else if (MovementState.Sliding)
         {
             if (CheckStillOnWall())
             {
-                Acceleration = (glissadeDir * speed );
-                Acceleration = Vector2.Dot(new Vector2(redNormal.z, redNormal.x), Acceleration)* new Vector3(redNormal.z, 0, -redNormal.x) * speed; ;
+                Acceleration = (glissadeDir);
+                Acceleration = Vector2.Dot(new Vector2(redNormal.z, redNormal.x), Acceleration)* new Vector3(redNormal.z, 0, -redNormal.x) ;
                 applyGravity = false;
             }
         }
         else if (MovementState.GroundSliding)
         {
-            Acceleration = (glissadeDir * vertical * speed);
-            Acceleration = Acceleration * VelJump.Evaluate(CurrentSlide / 2);
+            Acceleration = (glissadeDir);
         }
-      
-        if (MovementState.VelJumping)
-        {
-            Vector3 prev = Vector3.ClampMagnitude(myTransform.forward * vertical + myTransform.right * horizontal,1);
-            Acceleration += prev * VelJump.Evaluate(VelJumpAddCounter) * (VelocityAddition);
-        }
-        Acceleration = Vector3.ClampMagnitude(Acceleration, speed + (MovementState.VelJumping ? VelJump.Evaluate(VelJumpAddCounter) * (VelocityAddition):0)) *myTimeDelta;
+
+        Acceleration = Acceleration * (speed+ additionalSpeed)*myTimeDelta;
         if (MovementState.Sledging)
         {
             Acceleration = (glissadeDir * vertical * speed);
             Acceleration *= FallinCurve.Evaluate(currentSledging / 4) * SledgingSpeed;
         }
-        if (MovementState.WallJumping&&!MovementState.Sliding)
-            Acceleration +=  lastWall* WallCurve.Evaluate(currentWJ) * WallJumpingForce*myTimeDelta;
+        if (MovementState.WallJumping && !MovementState.Sliding)
+            print("mdr");
         if(applyGravity)
             Acceleration += (myTransform.up * Physics.gravity.y * FallinCurve.Evaluate(timeInAir) + myTransform.up * currentJ + JumpFormula()*myTransform.up) * myTimeDelta;
         CC.Move(Acceleration);
-        UpdateVelJump();
+        UpdateSpeed();
+        CheckGrounded();
         UpdateJump();
         float p = Pythagore(Acceleration.x / myTimeDelta, Acceleration.z / myTimeDelta);
         CheckSpeedParticles(Acceleration);
         DisplaySpeed.text = p.ToString("#.##");
     }
-    bool NeedCorrection(Vector3 Acc)
+    void CheckGrounded()
     {
-        Vector2 minus = new Vector2(Acc.x - redNormal.x, Acc.z - redNormal.z);
-        Vector2 add = new Vector2(Acc.x + redNormal.x, Acc.z + redNormal.z);
-        return minus.magnitude > add.magnitude;
+        if(CC.isGrounded&&LastWall!=null)
+        {
+            LastWall = null;
+        }
     }
     float Pythagore(float x, float y)
     {
@@ -201,7 +194,6 @@ public class PlayerMovementsCC : MonoBehaviour
         if (Input.GetKey(KeyCode.LeftShift)&&!MovementState.Sliding&&!MovementState.GroundSliding&&CurrentSlide==0)
         {
             willSlide = true;
-            speed = 13f;
             
         }
         if (willSlide && CC.isGrounded)
@@ -218,7 +210,6 @@ public class PlayerMovementsCC : MonoBehaviour
         }
         if (CurrentSlide>1)
         {
-            speed = 10f;
             CC.height = (CurrentSlide-1) * 5;
             if (CC.height > 1)
             {
@@ -249,6 +240,13 @@ public class PlayerMovementsCC : MonoBehaviour
         }
         if (willJump&&CC.isGrounded)
         {
+            if (MovementState.GroundSliding)
+            {
+                MovementState.GroundSliding = false;
+                CC.height = 1;
+                CurrentSlide = 0;
+                willSlide = false;
+            }
             Jump();
         }
         if (countingSpace)
@@ -274,7 +272,6 @@ public class PlayerMovementsCC : MonoBehaviour
             {
                 MovementState.Sliding = true;
                 redNormal = hitRay.normal;
-                CheckWallJump(hitRay.normal, hitRay.point);
                
                 return true;
             }
@@ -298,8 +295,6 @@ public class PlayerMovementsCC : MonoBehaviour
         willJump = false;
         countingSpace = true;
         timeInAir = 0;
-        MovementState.VelJumping = true;
-        VelJumpAddCounter = 0;
     }
     float JumpFormula()
     {
@@ -328,17 +323,16 @@ public class PlayerMovementsCC : MonoBehaviour
             }
         }
     }
-    void UpdateVelJump()
+    void UpdateSpeed()
     {
-        if (MovementState.VelJumping)
+        if (CC.isGrounded&&!MovementState.GroundSliding)
         {
-            VelJumpAddCounter += myTimeDelta;
-            if (VelJumpAddCounter > 1)
-            {
-                MovementState.VelJumping = false;
-                VelJumpAddCounter = 0;
-            }
+            if (additionalSpeed > 0)
+                additionalSpeed -= myTimeDelta * speedLosingGround * (speed + additionalSpeed);
+            else
+                additionalSpeed = 0;
         }
+       
     }
     float GetAcceleration()
     {
@@ -358,39 +352,22 @@ public class PlayerMovementsCC : MonoBehaviour
             TimeManager.ResetTime();
         }
     }
-    bool CheckWallJump(Vector3 normal, Vector3 Point)
-    {
-        if (willJump)
-        {
-            WallSparkles.Stop();
-            currentWJ = 0;
-            MovementState.WallJumping = true;
-            lastWall = -new Vector3(Point.x - myTransform.position.x, 0, Point.z - myTransform.position.z);
-            redNormal = normal;
-            Debug.DrawLine(Point, Point + normal, Color.red, 2);
-            Jump();
-            currentJ = 13;
-            return true;
-        }
-        else
-            return false;
-    }
+
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
-        print(Mathf.Abs(hit.normal.x) + Mathf.Abs(hit.normal.z) > SlopeToWallJump);
         if(Mathf.Abs(hit.normal.x)+Mathf.Abs(hit.normal.z)>SlopeToWallJump)
         {
-            if (CheckWallJump(hit.normal, hit.point))
+            if (willJump&&LastWall!= hit.gameObject)
             {
-                if (WallSparkles.isPlaying)
-                    WallSparkles.Stop();
+                additionalSpeed += speedToAddEachJump;
+                Jump();
+                LastWall = hit.gameObject;
             }
             else if (willSlide)
             {
                 willSlide = false;
                 print("Sliding");
                 MovementState.Sliding = true;
-                redNormal = hit.normal;
                 glissadeDir = transform.forward;
                 if(Vector3.Distance(myTransform.right,hit.point)<Vector3.Distance(-myTransform.right,hit.point))
                 {
