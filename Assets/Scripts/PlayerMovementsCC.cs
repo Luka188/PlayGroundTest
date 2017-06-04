@@ -19,6 +19,7 @@ public class PlayerMovementsCC : MonoBehaviour
     public float SledgingSpeed;
     public float speedToAddEachJump;
     public float speedLosingGround;
+    public float InvincibiltyAfterJump;
 
     float myTimeDelta;
     float currentH;
@@ -30,6 +31,9 @@ public class PlayerMovementsCC : MonoBehaviour
     float timeInAir = 0;
     float CurrentSlide = 0;
     float currentSledging = 0;
+    float RabbitCounter;
+    float calculatedSpeed;
+    float currentInvincibility;
    
     //bools
     bool willJump;
@@ -41,7 +45,7 @@ public class PlayerMovementsCC : MonoBehaviour
     //Unity Stuffs
     public AnimationCurve WallCurve;
     public AnimationCurve FallinCurve;
-    public AnimationCurve VelJump;
+    public AnimationCurve RabbitCurve;
     [SerializeField]
     RawImage JumpingVisual;
     [SerializeField]
@@ -84,15 +88,7 @@ public class PlayerMovementsCC : MonoBehaviour
         {
 
         }
-        else if (MovementState.Sliding)
-        {
-            if (CheckStillOnWall())
-            {
-                Acceleration = (glissadeDir);
-                Acceleration = Vector2.Dot(new Vector2(redNormal.z, redNormal.x), Acceleration)* new Vector3(redNormal.z, 0, -redNormal.x) ;
-                applyGravity = false;
-            }
-        }
+
         else if (MovementState.GroundSliding)
         {
             Acceleration = (glissadeDir);
@@ -104,17 +100,22 @@ public class PlayerMovementsCC : MonoBehaviour
             Acceleration = (glissadeDir * vertical * speed);
             Acceleration *= FallinCurve.Evaluate(currentSledging / 4) * SledgingSpeed;
         }
-        if (MovementState.WallJumping && !MovementState.Sliding)
-            print("mdr");
         if(applyGravity)
             Acceleration += (myTransform.up * Physics.gravity.y * FallinCurve.Evaluate(timeInAir) + myTransform.up * currentJ + JumpFormula()*myTransform.up) * myTimeDelta;
+        Vector3 p1 = myTransform.position;
         CC.Move(Acceleration);
+        Vector3 p2 = myTransform.position;
+        Vector3 p3 =(p1 - p2) / myTimeDelta;
+        calculatedSpeed = Pythagore(p3.x, p3.z);
         UpdateSpeed();
         CheckGrounded();
+        SmoothRabbitJump();
         UpdateJump();
+        UpdateInvincibilty();
         float p = Pythagore(Acceleration.x / myTimeDelta, Acceleration.z / myTimeDelta);
+        cam.fieldOfView = 60 + additionalSpeed;
         CheckSpeedParticles(Acceleration);
-        DisplaySpeed.text = p.ToString("#.##");
+        DisplaySpeed.text = calculatedSpeed.ToString("#.##");
     }
     void CheckGrounded()
     {
@@ -189,6 +190,10 @@ public class PlayerMovementsCC : MonoBehaviour
         }
             
     }
+    void UpdateInvincibilty()
+    {
+        currentInvincibility -= myTimeDelta;
+    }
     void CheckSlide()
     {
         if (Input.GetKey(KeyCode.LeftShift)&&!MovementState.Sliding&&!MovementState.GroundSliding&&CurrentSlide==0)
@@ -211,6 +216,7 @@ public class PlayerMovementsCC : MonoBehaviour
         if (CurrentSlide>1)
         {
             CC.height = (CurrentSlide-1) * 5;
+            RabbitCounter = 2;
             if (CC.height > 1)
             {
                 CC.height = 1;
@@ -279,7 +285,6 @@ public class PlayerMovementsCC : MonoBehaviour
             {
                 MovementState.Sliding = false;
                 WallSparkles.Stop();
-                speed = 10f;
                 return false;
             }
         }
@@ -295,6 +300,9 @@ public class PlayerMovementsCC : MonoBehaviour
         willJump = false;
         countingSpace = true;
         timeInAir = 0;
+        currentInvincibility = InvincibiltyAfterJump;
+        RabbitCounter = 0;
+        cam.transform.localPosition = Vector3.up * 0.5f;
     }
     float JumpFormula()
     {
@@ -325,13 +333,18 @@ public class PlayerMovementsCC : MonoBehaviour
     }
     void UpdateSpeed()
     {
-        if (CC.isGrounded&&!MovementState.GroundSliding)
+        if (calculatedSpeed < speed + additionalSpeed - 10&&currentInvincibility<=0)
+        {
+            additionalSpeed -= additionalSpeed -= myTimeDelta * speedLosingGround * (speed + additionalSpeed);
+        }
+        if (CC.isGrounded&&!MovementState.GroundSliding&&!willJump)
         {
             if (additionalSpeed > 0)
                 additionalSpeed -= myTimeDelta * speedLosingGround * (speed + additionalSpeed);
             else
                 additionalSpeed = 0;
         }
+        
        
     }
     float GetAcceleration()
@@ -352,6 +365,21 @@ public class PlayerMovementsCC : MonoBehaviour
             TimeManager.ResetTime();
         }
     }
+    void SmoothRabbitJump()
+    {
+        if (CC.isGrounded && !MovementState.GroundSliding)
+        {
+            RabbitCounter += myTimeDelta * 8;
+            if (RabbitCounter < 2)
+            {
+                cam.transform.localPosition = Vector3.up * RabbitCurve.Evaluate(RabbitCounter);
+
+            }
+            else cam.transform.localPosition = Vector3.up* 0.5f;
+        }
+        else if (CC.height != 1)
+            cam.transform.localPosition = Vector3.up * 0.5f;
+    }
 
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
@@ -363,26 +391,7 @@ public class PlayerMovementsCC : MonoBehaviour
                 Jump();
                 LastWall = hit.gameObject;
             }
-            else if (willSlide)
-            {
-                willSlide = false;
-                print("Sliding");
-                MovementState.Sliding = true;
-                glissadeDir = transform.forward;
-                if(Vector3.Distance(myTransform.right,hit.point)<Vector3.Distance(-myTransform.right,hit.point))
-                {
-                    WallSparkles.transform.localPosition = new Vector3( -.5f, -0.45f, 0);
-                    ForceRot.SetRotWithNormal(hit.normal);
-                    
-                }
-                else
-                {
-                    WallSparkles.transform.localPosition = new Vector3(0.5f, -0.45f, 0);
-                    ForceRot.SetRotWithNormal(hit.normal);
-                }
-                WallSparkles.Play(true);
-                MovementState.VelJumping = true;
-            }
+            
         }
 
     }
