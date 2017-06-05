@@ -41,6 +41,8 @@ public class PlayerMovementsCC : MonoBehaviour
     bool canWallJump;
     bool willSlide;
     bool applyGravity = true;
+    bool willGetBoost = false;
+    bool wannaSpeedUp = false;
 
     //Unity Stuffs
     public AnimationCurve WallCurve;
@@ -62,9 +64,27 @@ public class PlayerMovementsCC : MonoBehaviour
     ParticleSystem WallSparkles;
     [SerializeField]
     ForceRotation ForceRot;
+    [SerializeField]
+    UIAnimation UIanim;
+   
 
     GameObject LastWall;
-
+    GameObject LastGreen;
+    public void Reset()
+    {
+        LastWall = null;
+        MovementState.GroundSliding = false;
+        willJump = false;
+        willSlide = false;
+        countingSpace = false;
+        additionalSpeed = 0;
+        timeInAir = 0;
+        currentH = 0;
+        currentV = 0;
+        currentJ = 1;
+        RabbitCounter = 3;
+        currentWJ = 0;
+    }
     private void Start()
     {
         myTransform = transform;
@@ -81,6 +101,7 @@ public class PlayerMovementsCC : MonoBehaviour
         CheckJump();
         //CheckLeftClick();
         CheckSlide();
+        CheckWannaSpeed();
         Vector3 Acceleration = (myTransform.forward * vertical  + myTransform.right * horizontal );
         Acceleration = Vector3.ClampMagnitude(Acceleration, 1);
         applyGravity = true;
@@ -196,7 +217,7 @@ public class PlayerMovementsCC : MonoBehaviour
     }
     void CheckSlide()
     {
-        if (Input.GetKey(KeyCode.LeftShift)&&!MovementState.Sliding&&!MovementState.GroundSliding&&CurrentSlide==0)
+        if (Input.GetKey(KeyCode.F)&&!MovementState.Sliding&&!MovementState.GroundSliding&&CurrentSlide==0)
         {
             willSlide = true;
             
@@ -253,6 +274,7 @@ public class PlayerMovementsCC : MonoBehaviour
                 CurrentSlide = 0;
                 willSlide = false;
             }
+            
             Jump();
         }
         if (countingSpace)
@@ -267,6 +289,15 @@ public class PlayerMovementsCC : MonoBehaviour
             spaceCounter = 0;
         }
 
+    }
+    void CheckWannaSpeed()
+    {
+        if (Input.GetKey(KeyCode.LeftShift))
+        {
+            wannaSpeedUp = true;
+        }
+        else
+            wannaSpeedUp = false;
     }
     bool CheckStillOnWall()
     {
@@ -295,6 +326,11 @@ public class PlayerMovementsCC : MonoBehaviour
     }
     void Jump()
     {
+        if (wannaSpeedUp)
+        {
+            additionalSpeed += speedToAddEachJump;
+            UIanim.AnimateGreen();
+        }
         JumpingVisual.color = Color.white;
         currentJ = jumpHeight;
         willJump = false;
@@ -383,11 +419,18 @@ public class PlayerMovementsCC : MonoBehaviour
 
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
-        if(Mathf.Abs(hit.normal.x)+Mathf.Abs(hit.normal.z)>SlopeToWallJump)
+        if (hit.transform.tag == "Boost")
+        {
+            willGetBoost = true;
+            LastGreen = hit.gameObject;
+        }
+        else
+            willGetBoost = false;
+        if (Mathf.Abs(hit.normal.x)+Mathf.Abs(hit.normal.z)>SlopeToWallJump)
         {
             if (willJump&&LastWall!= hit.gameObject)
             {
-                additionalSpeed += speedToAddEachJump;
+                
                 Jump();
                 LastWall = hit.gameObject;
             }
